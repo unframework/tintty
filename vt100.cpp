@@ -20,15 +20,25 @@
 #include <avr/io.h>
 #include <ctype.h>
 #include <math.h>
-#include <arduino.h>
+#include <Arduino.h>
 #include <string.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include "vt100.h"
 #include <EEPROM.h>
 
+#include <TFT_ILI9163C.h>
 #include "vt100.h"
-#include "ili9340.h"
+// #include "ili9340.h"
+
+#define BLACK   0x0000
+#define BLUE    0x001F
+#define RED     0xF800
+#define GREEN   0x07E0
+#define CYAN    0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW  0xFFE0
+#define WHITE   0xFFFF
 
 char new_br[8];
 
@@ -106,18 +116,20 @@ void _vt100_reset(void){
   term.scroll_end_row = VT100_HEIGHT; // outside of screen = whole screen scrollable
   term.flags.cursor_wrap = 0;
   term.flags.origin_mode = 0;
-  ili9340_setFrontColor(term.front_color);
-    ili9340_setBackColor(term.back_color);
-    ili9340_setScrollMargins(0, 0);
-    ili9340_setScrollStart(0);
+
+  tft.setTextColor(WHITE);
+  // ili9340_setFrontColor(term.front_color);
+    // ili9340_setBackColor(term.back_color);
+    // ili9340_setScrollMargins(0, 0);
+    // ili9340_setScrollStart(0);
 }
 
 void _vt100_resetScroll(void){
     term.scroll_start_row = 0;
     term.scroll_end_row = VT100_HEIGHT;
     term.scroll_value = 0;
-    ili9340_setScrollMargins(0, 0);
-    ili9340_setScrollStart(0);
+    // ili9340_setScrollMargins(0, 0);
+    // ili9340_setScrollStart(0);
 }
 
 #define VT100_CURSOR_X(TERM) (TERM->cursor_x * TERM->char_width)
@@ -165,7 +177,8 @@ void _vt100_clearLines(struct vt100 *t, uint16_t start_line, uint16_t end_line){
     for(int c = start_line; c <= end_line; c++){
         uint16_t cy = t->cursor_y;
         t->cursor_y = c;
-        ili9340_fillRect(0, VT100_CURSOR_Y(t), VT100_SCREEN_WIDTH, VT100_CHAR_HEIGHT, 0x0000);
+    tft.fillRect(0, VT100_CURSOR_Y(t), VT100_SCREEN_WIDTH, VT100_CHAR_HEIGHT, BLACK);//mask ok
+        // ili9340_fillRect(0, VT100_CURSOR_Y(t), VT100_SCREEN_WIDTH, VT100_CHAR_HEIGHT, 0x0000);
         t->cursor_y = cy;
     }
     /*uint16_t start = ((start_line * t->char_height) + t->scroll) % VT100_SCREEN_HEIGHT;
@@ -196,7 +209,7 @@ void _vt100_scroll(struct vt100 *t, int16_t lines){
         //ili9340_fillRect(0, y, VT100_SCREEN_WIDTH, lines * VT100_CHAR_HEIGHT, 0x0000);
     }
     uint16_t scroll_start = (t->scroll_start_row + t->scroll_value) * VT100_CHAR_HEIGHT;
-    ili9340_setScrollStart(scroll_start);
+    // ili9340_setScrollStart(scroll_start);
 
     /*
     int16_t pixels = lines * VT100_CHAR_HEIGHT;
@@ -273,11 +286,11 @@ void _vt100_drawCursor(struct vt100 *t){
 // sends the character to the display and updates cursor position
 void _vt100_putc(struct vt100 *t, uint8_t ch){
     if(ch < 0x20 || ch > 0x7e){
-        static const char hex[] = "0123456789abcdef";
-        _vt100_putc(t, '0');
-        _vt100_putc(t, 'x');
-        _vt100_putc(t, hex[((ch & 0xf0) >> 4)]);
-        _vt100_putc(t, hex[(ch & 0x0f)]);
+        // static const char hex[] = "0123456789abcdef";
+        // _vt100_putc(t, '0');
+        // _vt100_putc(t, 'x');
+        // _vt100_putc(t, hex[((ch & 0xf0) >> 4)]);
+        // _vt100_putc(t, hex[(ch & 0x0f)]);
         return;
     }
 
@@ -285,9 +298,11 @@ void _vt100_putc(struct vt100 *t, uint8_t ch){
     uint16_t x = VT100_CURSOR_X(t);
     uint16_t y = VT100_CURSOR_Y(t);
 
-    ili9340_setFrontColor(t->front_color);
-    ili9340_setBackColor(t->back_color);
-    ili9340_drawChar(x, y, ch);
+  tft.setTextColor(t->front_color, t->back_color);
+//  ili9340_setFrontColor(t->front_color);
+//  ili9340_setBackColor(t->back_color);
+  tft.drawChar(x, y, ch, t->front_color, t->back_color, 1);
+//  ili9340_drawChar(x, y, ch);
 
     // move cursor right
     _vt100_move(t, 1, 0);
@@ -403,13 +418,16 @@ STATE(_st_esc_sq_bracket, term, ev, arg){
                         if(term->narg == 0 || (term->narg == 1 && term->args[0] == 0)){
                             // clear to end of line (to \n or to edge?)
                             // including cursor
-                            ili9340_fillRect(x, y, VT100_SCREEN_WIDTH - x, VT100_CHAR_HEIGHT, term->back_color);
+                            tft.fillRect(x, y, VT100_SCREEN_WIDTH - x, VT100_CHAR_HEIGHT, term->back_color);
+                        //  ili9340_fillRect(x, y, VT100_SCREEN_WIDTH - x, VT100_CHAR_HEIGHT, term->back_color);
                         } else if(term->narg == 1 && term->args[0] == 1){
                             // clear from left to current cursor position
-                            ili9340_fillRect(0, y, x + VT100_CHAR_WIDTH, VT100_CHAR_HEIGHT, term->back_color);
+                            tft.fillRect(0, y, x + VT100_CHAR_WIDTH, VT100_CHAR_HEIGHT, term->back_color);
+                        //  ili9340_fillRect(0, y, x + VT100_CHAR_WIDTH, VT100_CHAR_HEIGHT, term->back_color);
                         } else if(term->narg == 1 && term->args[0] == 2){
                             // clear whole current line
-                            ili9340_fillRect(0, y, VT100_SCREEN_WIDTH, VT100_CHAR_HEIGHT, term->back_color);
+                            tft.fillRect(0, y, VT100_SCREEN_WIDTH, VT100_CHAR_HEIGHT, term->back_color);
+                        //  ili9340_fillRect(0, y, VT100_SCREEN_WIDTH, VT100_CHAR_HEIGHT, term->back_color);
                         }
                         term->state = _st_idle;
                         break;
@@ -484,15 +502,18 @@ STATE(_st_esc_sq_bracket, term, ev, arg){
                                 term->front_color = 0xffff;
                                 term->back_color = 0x0000;
 
-                                ili9340_setFrontColor(term->front_color);
-                                ili9340_setBackColor(term->back_color);
+                tft.setTextColor(term->front_color, term->back_color);
+                                // ili9340_setFrontColor(term->front_color);
+                                // ili9340_setBackColor(term->back_color);
                             }
                             if(n >= 30 && n < 38){ // fg colors
                                 term->front_color = colors[n-30];
-                                ili9340_setFrontColor(term->front_color);
+                tft.setTextColor(term->front_color, term->back_color);
+                                // ili9340_setFrontColor(term->front_color);
                             } else if(n >= 40 && n < 48){
                                 term->back_color = colors[n-40];
-                                ili9340_setBackColor(term->back_color);
+                tft.setTextColor(term->front_color, term->back_color);
+                                // ili9340_setBackColor(term->back_color);
                             }
                         }
                         term->state = _st_idle;
@@ -513,7 +534,7 @@ STATE(_st_esc_sq_bracket, term, ev, arg){
                             uint16_t top_margin = term->scroll_start_row * VT100_CHAR_HEIGHT;
                             uint16_t bottom_margin = VT100_SCREEN_HEIGHT -
                                 (term->scroll_end_row * VT100_CHAR_HEIGHT);
-                            ili9340_setScrollMargins(top_margin, bottom_margin);
+                            //ili9340_setScrollMargins(top_margin, bottom_margin);
                             //ili9340_setScrollStart(0); // reset scroll
                         } else {
                             _vt100_resetScroll();
@@ -533,35 +554,35 @@ STATE(_st_esc_sq_bracket, term, ev, arg){
 
           case 'q' :  vt100_puts("\r\n"); // on-screen LEDS added PS
                       char bfr[20];
-                      switch (term->args[0])
-                      { case 0 : ili9340_drawRect(186,6,10,10,ILI9340_RED,ILI9340_BLACK);
-                                 ili9340_drawRect(200,6,10,10,ILI9340_RED,ILI9340_BLACK);
-                                 ili9340_drawRect(214,6,10,10,ILI9340_RED,ILI9340_BLACK);
-                                 ili9340_drawRect(228,6,10,10,ILI9340_RED,ILI9340_BLACK);
-                                 break;
-                        case 1 : ili9340_fillRect(186,6,10,10,ILI9340_RED); break;
-                        case 2 : ili9340_fillRect(200,6,10,10,ILI9340_RED); break;
-                        case 3 : ili9340_fillRect(214,6,10,10,ILI9340_RED); break;
-                        case 4 : ili9340_fillRect(228,6,10,10,ILI9340_RED); break;
+                      // switch (term->args[0])
+                      // { case 0 : ili9340_drawRect(186,6,10,10,ILI9340_RED,ILI9340_BLACK);
+                      //           ili9340_drawRect(200,6,10,10,ILI9340_RED,ILI9340_BLACK);
+                      //           ili9340_drawRect(214,6,10,10,ILI9340_RED,ILI9340_BLACK);
+                      //           ili9340_drawRect(228,6,10,10,ILI9340_RED,ILI9340_BLACK);
+                      //           break;
+                      //   case 1 : ili9340_fillRect(186,6,10,10,ILI9340_RED); break;
+                      //   case 2 : ili9340_fillRect(200,6,10,10,ILI9340_RED); break;
+                      //   case 3 : ili9340_fillRect(214,6,10,10,ILI9340_RED); break;
+                      //   case 4 : ili9340_fillRect(228,6,10,10,ILI9340_RED); break;
 
-                        case 5 : ili9340_drawRect(186,6,10,10,ILI9340_RED,ILI9340_BLACK); break;
-                        case 6 : ili9340_drawRect(200,6,10,10,ILI9340_RED,ILI9340_BLACK); break;
-                        case 7 : ili9340_drawRect(214,6,10,10,ILI9340_RED,ILI9340_BLACK); break;
-                        case 8 : ili9340_drawRect(228,6,10,10,ILI9340_RED,ILI9340_BLACK); break;
-                      }
+                      //   case 5 : ili9340_drawRect(186,6,10,10,ILI9340_RED,ILI9340_BLACK); break;
+                      //   case 6 : ili9340_drawRect(200,6,10,10,ILI9340_RED,ILI9340_BLACK); break;
+                      //   case 7 : ili9340_drawRect(214,6,10,10,ILI9340_RED,ILI9340_BLACK); break;
+                      //   case 8 : ili9340_drawRect(228,6,10,10,ILI9340_RED,ILI9340_BLACK); break;
+                      // }
                       term->state = _st_idle;
                       break;
           case 'X' : // Baud Rate setting added PS
-                  switch (term->args[0])
-                      { case 1 : Serial1.end(); Serial1.begin(300); strcpy(new_br,"300   "); break;
-                        case 2 : Serial1.end(); Serial1.begin(2400); strcpy(new_br,"2400  "); break;
-                        case 3 : Serial1.end(); Serial1.begin(9600); strcpy(new_br,"9600  "); break;
-                        case 4 : Serial1.end(); Serial1.begin(57600); strcpy(new_br,"57600 "); break;
-                        case 5 : Serial1.end(); Serial1.begin(76800); strcpy(new_br,"76800 "); break;
-                        case 6 : Serial1.end(); Serial1.begin(115200); strcpy(new_br,"115200"); break;
-                      }
-                      EEPROM.update(BAUD_STORE, term->args[0]);
-                      EEPROM.update(BAUD_STORE+1, term->args[0]^0xff);
+                  // switch (term->args[0])
+                  //     { case 1 : Serial1.end(); Serial1.begin(300); strcpy(new_br,"300   "); break;
+                  //       case 2 : Serial1.end(); Serial1.begin(2400); strcpy(new_br,"2400  "); break;
+                  //       case 3 : Serial1.end(); Serial1.begin(9600); strcpy(new_br,"9600  "); break;
+                  //       case 4 : Serial1.end(); Serial1.begin(57600); strcpy(new_br,"57600 "); break;
+                  //       case 5 : Serial1.end(); Serial1.begin(76800); strcpy(new_br,"76800 "); break;
+                  //       case 6 : Serial1.end(); Serial1.begin(115200); strcpy(new_br,"115200"); break;
+                  //     }
+                  //     EEPROM.update(BAUD_STORE, term->args[0]);
+                  //     EEPROM.update(BAUD_STORE+1, term->args[0]^0xff);
                       term->state = _st_idle;
                       break;
 

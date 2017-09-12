@@ -17,8 +17,10 @@
     Copyright: Martin K. SchrÃ¶der (info@fortmax.se) 2014
 */
 
-#define VT100_SCREEN_WIDTH ili9340_width()
-#define VT100_SCREEN_HEIGHT ili9340_height()
+extern class TFT_ILI9163C tft;
+
+#define VT100_SCREEN_WIDTH 128
+#define VT100_SCREEN_HEIGHT 128
 #define VT100_CHAR_WIDTH 6
 #define VT100_CHAR_HEIGHT 8
 #define VT100_HEIGHT (VT100_SCREEN_HEIGHT / VT100_CHAR_HEIGHT)

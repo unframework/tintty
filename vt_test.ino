@@ -16,7 +16,10 @@
   Conversion to Arduino, additional codes and this page by Peter Scargill 2016
 */
 
-#include "ili9340.h"
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <TFT_ILI9163C.h>
+// #include "ili9340.h"
 #include "vt100.h"
 
 extern char new_br[8]; // baud-rate string - if non-zero will update screen
@@ -24,11 +27,15 @@ uint32_t charCounter=0;
 uint32_t charShadow=0;
 uint8_t  charStart=1;
 
+TFT_ILI9163C tft = TFT_ILI9163C(10, 8, 9);
+
 void setup() {
   Serial.begin(115200);
-  Serial1.begin(115200);
-  ili9340_init();
-  ili9340_setRotation(0);
+  // Serial1.begin(115200);
+
+  tft.begin();
+  // ili9340_init();
+  // ili9340_setRotation(0);
 }
 
 #define PURPLE_ON_BLACK "\e[35;40m"
@@ -46,20 +53,20 @@ void loop() {
   // print some fixed purple text top and bottom
   vt100_puts(PURPLE_ON_BLACK);
   vt100_puts("\e[2;1HSerial HC2016 Terminal 1.0");
-  vt100_puts("\e[39;1HBaud: 115200");
-  vt100_puts("\e[39;15HChars:");
+  vt100_puts("\e[3;1HBaud: 115200");
+  vt100_puts("\e[3;15HChars:");
   // 4 LEDS in the top corner initially set to OFF
-  ili9340_drawRect(186,6,10,10,ILI9340_RED,ILI9340_BLACK);
-  ili9340_drawRect(200,6,10,10,ILI9340_RED,ILI9340_BLACK);
-  ili9340_drawRect(214,6,10,10,ILI9340_RED,ILI9340_BLACK);
-  ili9340_drawRect(228,6,10,10,ILI9340_RED,ILI9340_BLACK);
+  // ili9340_drawRect(186,6,10,10,ILI9340_RED,ILI9340_BLACK);
+  // ili9340_drawRect(200,6,10,10,ILI9340_RED,ILI9340_BLACK);
+  // ili9340_drawRect(214,6,10,10,ILI9340_RED,ILI9340_BLACK);
+  // ili9340_drawRect(228,6,10,10,ILI9340_RED,ILI9340_BLACK);
   // delimit fixed areas
-  ili9340_drawFastHLine(0,20, 240, ILI9340_BLUE);
-  ili9340_drawFastHLine(0,300, 240, ILI9340_RED);
+  // ili9340_drawFastHLine(0,20, 240, ILI9340_BLUE);
+  // ili9340_drawFastHLine(0,300, 240, ILI9340_RED);
   vt100_puts("\e[4;38r"); // set the scrolling region
   vt100_puts(GREEN_ON_BLACK);
-  vt100_puts("\e[37;1H"); // Set up at line 37, char position 1
-  vt100_puts("\e[0q"); // All top corner LEDs off
+  vt100_puts("\e[5;1H"); // Set up at clear spot on screen
+  // vt100_puts("\e[0q"); // All top corner LEDs off
 
   if ((EEPROM.read(BAUD_STORE)^EEPROM.read(BAUD_STORE+1))==0xff)
   {
@@ -74,7 +81,7 @@ void loop() {
     data=Serial.read();
     if(data == -1)
       {
-      data=Serial1.read();
+      // data=Serial1.read();
       if(data == -1)
           {
           //if nothing coming in serial - check for baud rate message
