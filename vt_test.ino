@@ -20,12 +20,17 @@
 #include <Adafruit_GFX.h>
 #include <TFT_ILI9163C.h>
 // #include "ili9340.h"
+
+#include "tintty.h"
+
+/*
 #include "vt100.h"
 
 extern char new_br[8]; // baud-rate string - if non-zero will update screen
 uint32_t charCounter=0;
 uint32_t charShadow=0;
 uint8_t  charStart=1;
+*/
 
 TFT_ILI9163C tft = TFT_ILI9163C(10, 8, 9);
 
@@ -36,12 +41,22 @@ void setup() {
   tft.begin();
   // ili9340_init();
   // ili9340_setRotation(0);
+
+  tintty_run(
+    [=](){ return (char)Serial.read(); },
+    [=](char ch){ Serial.print(ch); },
+    &tft
+  );
 }
 
+/*
 #define PURPLE_ON_BLACK "\e[35;40m"
 #define GREEN_ON_BLACK "\e[32;40m"
+*/
 
 void loop() {
+
+  /*
   auto respond = [=](char *str){ Serial.print(str); };
   vt100_init(respond);
   sei();
@@ -109,4 +124,5 @@ void loop() {
     charCounter++;
     vt100_putc(data);
   }
+  */
 }
