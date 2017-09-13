@@ -55,6 +55,15 @@ void _main(
                 state.cursor_row = 0;
             }
         }
+
+        // display caret
+        tft->fillRect(
+            state.cursor_col * CHAR_WIDTH,
+            state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1,
+            CHAR_WIDTH,
+            1,
+            state.fg_tft_color
+        );
     }
 }
 
