@@ -22,7 +22,60 @@ const int16_t max_row = SCREEN_HEIGHT / CHAR_HEIGHT;
 struct tintty_state {
     int16_t cursor_col, cursor_row;
     uint16_t bg_tft_color, fg_tft_color;
+
+    char out_char;
+    int16_t out_char_col, out_char_row;
 } state;
+
+struct tintty_rendered {
+    int16_t cursor_col, cursor_row;
+} rendered;
+
+void _render(TFT_ILI9163C *tft) {
+    // render character if needed
+    if (state.out_char != 0) {
+        const char rendered_char = state.out_char;
+        state.out_char = 0; // clear for next render
+
+        tft->drawChar(
+            state.out_char_col * CHAR_WIDTH,
+            state.out_char_row * CHAR_HEIGHT,
+            rendered_char,
+            state.fg_tft_color,
+            state.bg_tft_color,
+            1
+        );
+
+        // the char draw may overpaint the cursor, in which case mark it invisible
+        if (
+            rendered.cursor_col == state.cursor_col &&
+            rendered.cursor_row == state.cursor_row
+        ) {
+            rendered.cursor_col = -1;
+            rendered.cursor_row = -1;
+        }
+    }
+
+    // redraw cursor if needed
+    if (
+        rendered.cursor_col != state.cursor_col ||
+        rendered.cursor_row != state.cursor_row
+    ) {
+        // @todo clear old cursor unless it was not shown
+
+        // save new rendered state and reflect it on screen
+        rendered.cursor_col = state.cursor_col;
+        rendered.cursor_row = state.cursor_row;
+
+        tft->fillRect(
+            state.cursor_col * CHAR_WIDTH,
+            state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1,
+            CHAR_WIDTH,
+            1,
+            state.fg_tft_color
+        );
+    }
+}
 
 void _main(
     char (*read_char)(),
@@ -34,14 +87,9 @@ void _main(
 
     if (initial_character >= 0x20 && initial_character <= 0x7e) {
         // output displayable character
-        tft->drawChar(
-            state.cursor_col * CHAR_WIDTH,
-            state.cursor_row * CHAR_HEIGHT,
-            initial_character,
-            state.fg_tft_color,
-            state.bg_tft_color,
-            1
-        );
+        state.out_char = initial_character;
+        state.out_char_col = state.cursor_col;
+        state.out_char_row = state.cursor_row;
 
         // update caret
         state.cursor_col += 1;
@@ -56,14 +104,7 @@ void _main(
             }
         }
 
-        // display caret
-        tft->fillRect(
-            state.cursor_col * CHAR_WIDTH,
-            state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1,
-            CHAR_WIDTH,
-            1,
-            state.fg_tft_color
-        );
+        _render(tft);
     }
 }
 
@@ -77,6 +118,14 @@ void tintty_run(
     state.cursor_row = 0;
     state.fg_tft_color = TFT_WHITE;
     state.bg_tft_color = TFT_BLACK;
+
+    state.out_char = 0;
+
+    rendered.cursor_col = -1;
+    rendered.cursor_row = -1;
+
+    // initial render
+    _render(tft);
 
     // main read cycle
     while (1) {
