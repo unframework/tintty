@@ -23,21 +23,67 @@ struct tintty_state {
     int16_t cursor_col, cursor_row;
     uint16_t bg_tft_color, fg_tft_color;
 
+    // @todo deal with integer overflow
+    int16_t top_row; // first displayed row in a logical scrollback buffer
+
     char out_char;
     int16_t out_char_col, out_char_row;
 } state;
 
 struct tintty_rendered {
     int16_t cursor_col, cursor_row;
+    int16_t top_row;
 } rendered;
 
 void _render(TFT_ILI9163C *tft) {
+    // if scrolling, prepare the "recycled" screen area
+    if (state.top_row != rendered.top_row) {
+        // clear the new piece of screen to be recycled as blank space
+        int16_t row_delta = state.top_row - rendered.top_row;
+
+        // @todo handle scroll-up
+        if (row_delta > 0) {
+            // pre-clear the lines at the bottom
+            int16_t clear_height = min(SCREEN_HEIGHT, row_delta * CHAR_HEIGHT);
+            int16_t clear_sbuf_bottom = (state.top_row * CHAR_HEIGHT + SCREEN_HEIGHT) % SCREEN_HEIGHT;
+            int16_t clear_sbuf_top = clear_sbuf_bottom - clear_height;
+
+            // if rectangle straddles the screen buffer top edge, render that slice at bottom edge
+            if (clear_sbuf_top < 0) {
+                tft->fillRect(
+                    0,
+                    clear_sbuf_top + SCREEN_HEIGHT,
+                    SCREEN_WIDTH,
+                    -clear_sbuf_top,
+                    state.bg_tft_color
+                );
+            }
+
+            // if rectangle is not entirely above top edge, render the normal slice
+            if (clear_sbuf_bottom > 0) {
+                tft->fillRect(
+                    0,
+                    max(0, clear_sbuf_top),
+                    SCREEN_WIDTH,
+                    clear_sbuf_bottom - max(0, clear_sbuf_top),
+                    state.bg_tft_color
+                );
+            }
+        }
+
+        // update displayed scroll
+        tft->scroll((state.top_row * CHAR_HEIGHT) % SCREEN_HEIGHT);
+
+        // save rendered state
+        rendered.top_row = state.top_row;
+    }
+
     // render character if needed
     if (state.out_char != 0) {
         tft->drawChar(
             state.out_char_col * CHAR_WIDTH,
-            state.out_char_row * CHAR_HEIGHT,
-            rendered_char,
+            (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
+            state.out_char,
             state.fg_tft_color,
             state.bg_tft_color,
             1
@@ -67,7 +113,7 @@ void _render(TFT_ILI9163C *tft) {
         // reflect new cursor position on screen
         tft->fillRect(
             state.cursor_col * CHAR_WIDTH,
-            state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1,
+            (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
             CHAR_WIDTH,
             1,
             state.fg_tft_color
@@ -100,9 +146,9 @@ void _main(
             state.cursor_col = 0;
             state.cursor_row += 1;
 
-            // @todo proper scroll-down
+            // move displayed window down to cover cursor
             if (state.cursor_row >= max_row) {
-                state.cursor_row = 0;
+                state.top_row = state.cursor_row - max_row + 1;
             }
         }
 
@@ -118,6 +164,7 @@ void tintty_run(
     // set up initial state
     state.cursor_col = 0;
     state.cursor_row = 0;
+    state.top_row = 0;
     state.fg_tft_color = TFT_WHITE;
     state.bg_tft_color = TFT_BLACK;
 
@@ -125,6 +172,11 @@ void tintty_run(
 
     rendered.cursor_col = -1;
     rendered.cursor_row = -1;
+
+    // set up fullscreen TFT scroll
+    // magic value for second parameter (bottom-fixed-area)
+    // compensate for extra length of graphical RAM (GRAM)
+    tft->defineScrollArea(0, 32);
 
     // initial render
     _render(tft);
