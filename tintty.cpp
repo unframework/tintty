@@ -34,9 +34,6 @@ struct tintty_rendered {
 void _render(TFT_ILI9163C *tft) {
     // render character if needed
     if (state.out_char != 0) {
-        const char rendered_char = state.out_char;
-        state.out_char = 0; // clear for next render
-
         tft->drawChar(
             state.out_char_col * CHAR_WIDTH,
             state.out_char_row * CHAR_HEIGHT,
@@ -46,7 +43,11 @@ void _render(TFT_ILI9163C *tft) {
             1
         );
 
-        // the char draw may overpaint the cursor, in which case mark it invisible
+        // clear for next render
+        state.out_char = 0;
+
+        // the char draw may overpaint the cursor, in which case
+        // mark it for repaint
         if (
             rendered.cursor_col == state.cursor_col &&
             rendered.cursor_row == state.cursor_row
@@ -63,10 +64,7 @@ void _render(TFT_ILI9163C *tft) {
     ) {
         // @todo clear old cursor unless it was not shown
 
-        // save new rendered state and reflect it on screen
-        rendered.cursor_col = state.cursor_col;
-        rendered.cursor_row = state.cursor_row;
-
+        // reflect new cursor position on screen
         tft->fillRect(
             state.cursor_col * CHAR_WIDTH,
             state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1,
@@ -74,6 +72,10 @@ void _render(TFT_ILI9163C *tft) {
             1,
             state.fg_tft_color
         );
+
+        // save new rendered state
+        rendered.cursor_col = state.cursor_col;
+        rendered.cursor_row = state.cursor_row;
     }
 }
 
