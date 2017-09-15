@@ -19,6 +19,9 @@
 const int16_t max_col = SCREEN_WIDTH / CHAR_WIDTH;
 const int16_t max_row = SCREEN_HEIGHT / CHAR_HEIGHT;
 
+const int16_t IDLE_CYCLE_MAX = 6000;
+const int16_t IDLE_CYCLE_ON = 3000;
+
 struct tintty_state {
     int16_t cursor_col, cursor_row;
     uint16_t bg_tft_color, fg_tft_color;
@@ -28,6 +31,8 @@ struct tintty_state {
 
     char out_char;
     int16_t out_char_col, out_char_row;
+
+    int16_t idle_cycle_count; // @todo track during blocking reads mid-command
 } state;
 
 struct tintty_rendered {
@@ -103,26 +108,28 @@ void _render(TFT_ILI9163C *tft) {
         }
     }
 
-    // redraw cursor if needed
+    // always redraw cursor to animate
     if (
         rendered.cursor_col != state.cursor_col ||
         rendered.cursor_row != state.cursor_row
     ) {
         // @todo clear old cursor unless it was not shown
-
-        // reflect new cursor position on screen
-        tft->fillRect(
-            state.cursor_col * CHAR_WIDTH,
-            (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
-            CHAR_WIDTH,
-            1,
-            state.fg_tft_color
-        );
-
-        // save new rendered state
-        rendered.cursor_col = state.cursor_col;
-        rendered.cursor_row = state.cursor_row;
     }
+
+    // reflect new cursor position on screen
+    tft->fillRect(
+        state.cursor_col * CHAR_WIDTH,
+        (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
+        CHAR_WIDTH,
+        1,
+        state.idle_cycle_count < IDLE_CYCLE_ON
+            ? state.fg_tft_color
+            : state.bg_tft_color
+    );
+
+    // save new rendered state
+    rendered.cursor_col = state.cursor_col;
+    rendered.cursor_row = state.cursor_row;
 }
 
 void _main(
@@ -151,6 +158,13 @@ void _main(
                 state.top_row = state.cursor_row - max_row + 1;
             }
         }
+
+        // reset idle state
+        state.idle_cycle_count = 0;
+
+        _render(tft);
+    } else {
+        state.idle_cycle_count = (state.idle_cycle_count + 1) % IDLE_CYCLE_MAX;
 
         _render(tft);
     }
