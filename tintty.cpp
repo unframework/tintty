@@ -16,8 +16,8 @@
 #define CHAR_WIDTH 6
 #define CHAR_HEIGHT 8
 
-const int16_t max_col = SCREEN_WIDTH / CHAR_WIDTH;
-const int16_t max_row = SCREEN_HEIGHT / CHAR_HEIGHT;
+const int16_t screen_col_count = SCREEN_WIDTH / CHAR_WIDTH;
+const int16_t screen_row_count = SCREEN_HEIGHT / CHAR_HEIGHT;
 
 const int16_t IDLE_CYCLE_MAX = 6000;
 const int16_t IDLE_CYCLE_ON = 3000;
@@ -148,8 +148,8 @@ void _render(TFT_ILI9163C *tft) {
 void _ensure_cursor_vscroll() {
     // move displayed window down to cover cursor
     // @todo support scrolling up as well
-    if (state.cursor_row - state.top_row >= max_row) {
-        state.top_row = state.cursor_row - max_row + 1;
+    if (state.cursor_row - state.top_row >= screen_row_count) {
+        state.top_row = state.cursor_row - screen_row_count + 1;
     }
 }
 
@@ -226,7 +226,7 @@ void _main(
         // update caret
         state.cursor_col += 1;
 
-        if (state.cursor_col >= max_col) {
+        if (state.cursor_col >= screen_col_count) {
             state.cursor_col = 0;
             state.cursor_row += 1;
             _ensure_cursor_vscroll();
@@ -253,7 +253,7 @@ void _main(
                 state.cursor_col -= 1;
 
                 if (state.cursor_col < 0) {
-                    state.cursor_col = max_col - 1;
+                    state.cursor_col = screen_col_count - 1;
                     state.cursor_row -= 1;
                     _ensure_cursor_vscroll();
                 }
@@ -265,7 +265,7 @@ void _main(
                 {
                     // @todo blank out the existing characters? not sure if that is expected
                     const int16_t tab_num = state.cursor_col / TAB_SIZE;
-                    state.cursor_col = min(max_col - 1, (tab_num + 1) * TAB_SIZE);
+                    state.cursor_col = min(screen_col_count - 1, (tab_num + 1) * TAB_SIZE);
                 }
                 break;
 
