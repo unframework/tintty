@@ -166,8 +166,7 @@ void _send_sequence(
 
 void _exec_escape_code(
     char (*read_char)(),
-    void (*send_char)(char ch),
-    TFT_ILI9163C *tft
+    void (*send_char)(char ch)
 ) {
     // read next character after Escape-code
     // @todo time out?
@@ -272,7 +271,7 @@ void _main(
 
             case '\e':
                 // Escape-command
-                _exec_escape_code(read_char, send_char, tft);
+                _exec_escape_code(read_char, send_char);
                 break;
 
             default:
