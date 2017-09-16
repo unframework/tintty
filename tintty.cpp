@@ -143,7 +143,7 @@ void _render(TFT_ILI9163C *tft) {
     rendered.cursor_row = state.cursor_row;
 }
 
-void _ensure_cursor_scroll() {
+void _ensure_cursor_vscroll() {
     // move displayed window down to cover cursor
     // @todo support scrolling up as well
     if (state.cursor_row - state.top_row >= max_row) {
@@ -180,20 +180,20 @@ void _exec_escape_code(
         case 'D':
             // index (move down and possibly scroll)
             state.cursor_row += 1;
-            _ensure_cursor_scroll();
+            _ensure_cursor_vscroll();
             break;
 
         case 'M':
             // reverse index (move up and possibly scroll)
             state.cursor_row -= 1;
-            _ensure_cursor_scroll();
+            _ensure_cursor_vscroll();
             break;
 
         case 'E':
             // next line
             state.cursor_row += 1;
             state.cursor_col = 0;
-            _ensure_cursor_scroll();
+            _ensure_cursor_vscroll();
             break;
 
         case 'Z':
@@ -228,7 +228,7 @@ void _main(
         if (state.cursor_col >= max_col) {
             state.cursor_col = 0;
             state.cursor_row += 1;
-            _ensure_cursor_scroll();
+            _ensure_cursor_vscroll();
         }
 
         // reset idle state
@@ -239,7 +239,7 @@ void _main(
             case '\n':
                 // line-feed
                 state.cursor_row += 1;
-                _ensure_cursor_scroll();
+                _ensure_cursor_vscroll();
                 break;
 
             case '\r':
