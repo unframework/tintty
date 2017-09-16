@@ -104,19 +104,28 @@ void _render(TFT_ILI9163C *tft) {
             rendered.cursor_row == state.cursor_row
         ) {
             rendered.cursor_col = -1;
-            rendered.cursor_row = -1;
         }
     }
 
-    // always redraw cursor to animate
+    // clear old cursor unless it was not shown
     if (
-        rendered.cursor_col != state.cursor_col ||
-        rendered.cursor_row != state.cursor_row
+        rendered.cursor_col >= 0 &&
+        (
+            rendered.cursor_col != state.cursor_col ||
+            rendered.cursor_row != state.cursor_row
+        )
     ) {
-        // @todo clear old cursor unless it was not shown
+        tft->fillRect(
+            rendered.cursor_col * CHAR_WIDTH,
+            (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
+            CHAR_WIDTH,
+            1,
+            state.bg_tft_color // @todo save the original background colour or even pixel values
+        );
     }
 
     // reflect new cursor position on screen
+    // (always redraw cursor to animate)
     tft->fillRect(
         state.cursor_col * CHAR_WIDTH,
         (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
@@ -124,7 +133,7 @@ void _render(TFT_ILI9163C *tft) {
         1,
         state.idle_cycle_count < IDLE_CYCLE_ON
             ? state.fg_tft_color
-            : state.bg_tft_color
+            : state.bg_tft_color // @todo save the original background colour or even pixel values
     );
 
     // save new rendered state
