@@ -22,6 +22,8 @@ const int16_t max_row = SCREEN_HEIGHT / CHAR_HEIGHT;
 const int16_t IDLE_CYCLE_MAX = 6000;
 const int16_t IDLE_CYCLE_ON = 3000;
 
+const int16_t TAB_SIZE = 4;
+
 struct tintty_state {
     int16_t cursor_col, cursor_row;
     uint16_t bg_tft_color, fg_tft_color;
@@ -184,6 +186,20 @@ void _main(
             case '\r':
                 // carriage-return
                 state.cursor_col = 0;
+                break;
+
+            case '\b':
+                // backspace
+                state.cursor_col = max(0, state.cursor_col - 1);
+                break;
+
+            case '\t':
+                // tab
+                {
+                    // @todo blank out the existing characters? not sure if that is expected
+                    const int16_t tab_num = state.cursor_col / TAB_SIZE;
+                    state.cursor_col = min(max_col - 1, (tab_num + 1) * TAB_SIZE);
+                }
                 break;
 
             default:
