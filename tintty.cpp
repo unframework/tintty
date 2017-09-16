@@ -154,7 +154,7 @@ void _main(
             state.cursor_row += 1;
 
             // move displayed window down to cover cursor
-            if (state.cursor_row >= max_row) {
+            if (state.cursor_row - state.top_row >= max_row) {
                 state.top_row = state.cursor_row - max_row + 1;
             }
         }
