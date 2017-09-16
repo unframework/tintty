@@ -34,6 +34,20 @@ uint8_t  charStart=1;
 
 TFT_ILI9163C tft = TFT_ILI9163C(10, 8, 9);
 
+// buffer to test various input sequences
+char test_buffer[1024];
+uint8_t test_buffer_length = 0;
+uint8_t test_buffer_cursor = 0;
+
+void test_buffer_puts(char* str) {
+  while (*str) {
+    test_buffer[test_buffer_length] = *str;
+    test_buffer_length += 1;
+
+    str += 1;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   // Serial1.begin(115200);
@@ -42,8 +56,21 @@ void setup() {
   // ili9340_init();
   // ili9340_setRotation(0);
 
+  test_buffer_puts("Hi there!");
+
   tintty_run(
-    [=](){ return (char)Serial.read(); },
+    [=](){
+      // first read from the test buffer
+      if (test_buffer_cursor < test_buffer_length) {
+        char ch = test_buffer[test_buffer_cursor];
+        test_buffer_cursor += 1;
+
+        return ch;
+      }
+
+      // fall back to normal serial input
+      return (char)Serial.read();
+    },
     [=](char ch){ Serial.print(ch); },
     &tft
   );
