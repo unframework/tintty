@@ -164,6 +164,37 @@ void _send_sequence(
     }
 }
 
+void _exec_escape_bracket_command(
+    char (*read_char)(),
+    void (*send_char)(char ch)
+) {
+    // read next character after Escape-code and bracket
+    // @todo time out?
+    char command_character = read_char();
+
+    switch (command_character) {
+        case 'A':
+            // cursor up (no scroll)
+            state.cursor_row = max(0, state.cursor_row - 1);
+            break;
+
+        case 'B':
+            // cursor down (no scroll)
+            state.cursor_row = min(screen_row_count - 1, state.cursor_row + 1);
+            break;
+
+        case 'C':
+            // cursor right (no scroll)
+            state.cursor_col = min(screen_col_count - 1, state.cursor_col + 1);
+            break;
+
+        case 'D':
+            // cursor left (no scroll)
+            state.cursor_col = max(0, state.cursor_col - 1);
+            break;
+    }
+}
+
 void _exec_escape_code(
     char (*read_char)(),
     void (*send_char)(char ch)
@@ -172,10 +203,10 @@ void _exec_escape_code(
     // @todo time out?
     char esc_character = read_char();
 
-    // @todo support for (, ), #, c
+    // @todo support for (, ), #, c, cursor save/restore
     switch (esc_character) {
         case '[':
-            // @todo
+            _exec_escape_bracket_command(read_char, send_char);
             break;
 
         case 'D':
