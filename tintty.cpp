@@ -165,13 +165,15 @@ void _send_sequence(
 }
 
 void _exec_escape_bracket_command_with_args(
+    char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char ch),
-    char command_character,
     uint16_t* arg_list,
     uint16_t arg_count
 ) {
     // process next character after Escape-code, bracket and any numeric arguments
+    const char command_character = read_char();
+
     switch (command_character) {
         case 'A':
             // cursor up (no scroll)
@@ -207,7 +209,23 @@ void _exec_escape_bracket_command_with_args(
     }
 }
 
+char _read_decimal(
+    char (*peek_char)(),
+    char (*read_char)()
+) {
+    uint16_t accumulator = 0;
+
+    while (isdigit(peek_char())) {
+        const char digit_character = read_char();
+        const uint16_t digit = digit_character - '0';
+        accumulator = accumulator * 10 + digit;
+    }
+
+    return accumulator;
+}
+
 void _exec_escape_bracket_command(
+    char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char ch)
 ) {
@@ -215,40 +233,37 @@ void _exec_escape_bracket_command(
     uint16_t arg_list[MAX_COMMAND_ARG_COUNT];
     uint16_t arg_count = 0;
 
-    // @todo this would be easier with a peek-ahead input
-    char next_character = 0;
-
-    do {
-        next_character = read_char();
-
-        // see if we can extract digits
-        uint16_t arg_accumulator = 0;
-        uint16_t arg_digit_count = 0;
-
-        while (next_character >= '0' && next_character <= '9') {
-            const uint16_t digit = next_character - '0';
-            arg_accumulator = arg_accumulator * 10 + digit;
-            arg_digit_count += 1;
-
-            next_character = read_char();
-        }
-
-        if (arg_digit_count > 0) {
-            arg_list[arg_count] = arg_accumulator;
+    // start parsing arguments if any
+    // (this means that '' is treated as no arguments, but '0;' is treated as two arguments, each being zero)
+    // @todo handle leading semi-colon as empty arg?
+    if (isdigit(peek_char())) {
+        // keep consuming arguments while we have space
+        while (arg_count < MAX_COMMAND_ARG_COUNT) {
+            // consume decimal number
+            arg_list[arg_count] = _read_decimal(peek_char, read_char);
             arg_count += 1;
+
+            // stop processing if next char is not separator
+            if (peek_char() != ';') {
+                break;
+            }
+
+            // consume separator before starting next argument
+            read_char();
         }
-    } while(next_character == ';' && arg_count < MAX_COMMAND_ARG_COUNT);
+    }
 
     _exec_escape_bracket_command_with_args(
+        peek_char,
         read_char,
         send_char,
-        next_character,
         arg_list,
         arg_count
     );
 }
 
 void _exec_escape_code(
+    char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char ch)
 ) {
@@ -259,7 +274,7 @@ void _exec_escape_code(
     // @todo support for (, ), #, c, cursor save/restore
     switch (esc_character) {
         case '[':
-            _exec_escape_bracket_command(read_char, send_char);
+            _exec_escape_bracket_command(peek_char, read_char, send_char);
             break;
 
         case 'D':
@@ -294,6 +309,7 @@ void _exec_escape_code(
 }
 
 void _main(
+    char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char str),
     TFT_ILI9163C *tft
@@ -355,7 +371,7 @@ void _main(
 
             case '\e':
                 // Escape-command
-                _exec_escape_code(read_char, send_char);
+                _exec_escape_code(peek_char, read_char, send_char);
                 break;
 
             default:
@@ -368,6 +384,7 @@ void _main(
 }
 
 void tintty_run(
+    char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char str),
     TFT_ILI9163C *tft
@@ -394,6 +411,6 @@ void tintty_run(
 
     // main read cycle
     while (1) {
-        _main(read_char, send_char, tft);
+        _main(peek_char, read_char, send_char, tft);
     }
 }

@@ -60,6 +60,15 @@ void setup() {
 
   tintty_run(
     [=](){
+      // first peek from the test buffer
+      if (test_buffer_cursor < test_buffer_length) {
+        return test_buffer[test_buffer_cursor];
+      }
+
+      // fall back to normal serial input
+      return (char)Serial.peek();
+    },
+    [=](){
       // first read from the test buffer
       if (test_buffer_cursor < test_buffer_length) {
         char ch = test_buffer[test_buffer_cursor];
