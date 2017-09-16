@@ -145,8 +145,66 @@ void _render(TFT_ILI9163C *tft) {
 
 void _ensure_cursor_scroll() {
     // move displayed window down to cover cursor
+    // @todo support scrolling up as well
     if (state.cursor_row - state.top_row >= max_row) {
         state.top_row = state.cursor_row - max_row + 1;
+    }
+}
+
+void _send_sequence(
+    void (*send_char)(char ch),
+    char* str
+) {
+    // send zero-terminated sequence character by character
+    while (*str) {
+        send_char(*str);
+        str += 1;
+    }
+}
+
+void _exec_escape_code(
+    char (*read_char)(),
+    void (*send_char)(char ch),
+    TFT_ILI9163C *tft
+) {
+    // read next character after Escape-code
+    // @todo time out?
+    char esc_character = read_char();
+
+    // @todo support for (, ), #, c
+    switch (esc_character) {
+        case '[':
+            // @todo
+            break;
+
+        case 'D':
+            // index (move down and possibly scroll)
+            state.cursor_row += 1;
+            _ensure_cursor_scroll();
+            break;
+
+        case 'M':
+            // reverse index (move up and possibly scroll)
+            state.cursor_row -= 1;
+            _ensure_cursor_scroll();
+            break;
+
+        case 'E':
+            // next line
+            state.cursor_row += 1;
+            state.cursor_col = 0;
+            _ensure_cursor_scroll();
+            break;
+
+        case 'Z':
+            // Identify Terminal (DEC Private)
+            _send_sequence(send_char, "\e[?1;0c"); // DA response: no options
+            break;
+
+        default:
+            // unrecognized character
+            // @todo signal bell?
+            break;
     }
 }
 
@@ -176,6 +234,7 @@ void _main(
         // reset idle state
         state.idle_cycle_count = 0;
     } else {
+        // @todo bell, answer-back (0x05), delete
         switch (initial_character) {
             case '\n':
                 // line-feed
@@ -200,6 +259,11 @@ void _main(
                     const int16_t tab_num = state.cursor_col / TAB_SIZE;
                     state.cursor_col = min(max_col - 1, (tab_num + 1) * TAB_SIZE);
                 }
+                break;
+
+            case '\e':
+                // Escape-command
+                _exec_escape_code(read_char, send_char, tft);
                 break;
 
             default:
