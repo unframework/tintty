@@ -164,35 +164,88 @@ void _send_sequence(
     }
 }
 
+void _exec_escape_bracket_command_with_args(
+    char (*read_char)(),
+    void (*send_char)(char ch),
+    char command_character,
+    uint16_t* arg_list,
+    uint16_t arg_count
+) {
+    // process next character after Escape-code, bracket and any numeric arguments
+    switch (command_character) {
+        case 'A':
+            // cursor up (no scroll)
+            {
+                const uint16_t amount = (arg_count > 0 ? arg_list[0] : 1);
+                state.cursor_row = max(0, state.cursor_row - amount);
+                break;
+            }
+
+        case 'B':
+            // cursor down (no scroll)
+            {
+                const uint16_t amount = (arg_count > 0 ? arg_list[0] : 1);
+                state.cursor_row = min(screen_row_count - 1, state.cursor_row + amount);
+                break;
+            }
+
+        case 'C':
+            // cursor right (no scroll)
+            {
+                const uint16_t amount = (arg_count > 0 ? arg_list[0] : 1);
+                state.cursor_col = min(screen_col_count - 1, state.cursor_col + amount);
+                break;
+            }
+
+        case 'D':
+            // cursor left (no scroll)
+            {
+                const uint16_t amount = (arg_count > 0 ? arg_list[0] : 1);
+                state.cursor_col = max(0, state.cursor_col - amount);
+                break;
+            }
+    }
+}
+
 void _exec_escape_bracket_command(
     char (*read_char)(),
     void (*send_char)(char ch)
 ) {
-    // read next character after Escape-code and bracket
-    // @todo time out?
-    char command_character = read_char();
+    const uint16_t MAX_COMMAND_ARG_COUNT = 4;
+    uint16_t arg_list[MAX_COMMAND_ARG_COUNT];
+    uint16_t arg_count = 0;
 
-    switch (command_character) {
-        case 'A':
-            // cursor up (no scroll)
-            state.cursor_row = max(0, state.cursor_row - 1);
-            break;
+    // @todo this would be easier with a peek-ahead input
+    char next_character = 0;
 
-        case 'B':
-            // cursor down (no scroll)
-            state.cursor_row = min(screen_row_count - 1, state.cursor_row + 1);
-            break;
+    do {
+        next_character = read_char();
 
-        case 'C':
-            // cursor right (no scroll)
-            state.cursor_col = min(screen_col_count - 1, state.cursor_col + 1);
-            break;
+        // see if we can extract digits
+        uint16_t arg_accumulator = 0;
+        uint16_t arg_digit_count = 0;
 
-        case 'D':
-            // cursor left (no scroll)
-            state.cursor_col = max(0, state.cursor_col - 1);
-            break;
-    }
+        while (next_character >= '0' && next_character <= '9') {
+            const uint16_t digit = next_character - '0';
+            arg_accumulator = arg_accumulator * 10 + digit;
+            arg_digit_count += 1;
+
+            next_character = read_char();
+        }
+
+        if (arg_digit_count > 0) {
+            arg_list[arg_count] = arg_accumulator;
+            arg_count += 1;
+        }
+    } while(next_character == ';' && arg_count < MAX_COMMAND_ARG_COUNT);
+
+    _exec_escape_bracket_command_with_args(
+        read_char,
+        send_char,
+        next_character,
+        arg_list,
+        arg_count
+    );
 }
 
 void _exec_escape_code(
