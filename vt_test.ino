@@ -56,7 +56,7 @@ void setup() {
   // ili9340_init();
   // ili9340_setRotation(0);
 
-  test_buffer_puts("Hi there!");
+  test_buffer_puts("Hi!\nSecond\nThird\rStart");
 
   tintty_run(
     [=](){

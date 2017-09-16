@@ -132,6 +132,13 @@ void _render(TFT_ILI9163C *tft) {
     rendered.cursor_row = state.cursor_row;
 }
 
+void _ensure_cursor_scroll() {
+    // move displayed window down to cover cursor
+    if (state.cursor_row - state.top_row >= max_row) {
+        state.top_row = state.cursor_row - max_row + 1;
+    }
+}
+
 void _main(
     char (*read_char)(),
     void (*send_char)(char str),
@@ -152,22 +159,31 @@ void _main(
         if (state.cursor_col >= max_col) {
             state.cursor_col = 0;
             state.cursor_row += 1;
-
-            // move displayed window down to cover cursor
-            if (state.cursor_row - state.top_row >= max_row) {
-                state.top_row = state.cursor_row - max_row + 1;
-            }
+            _ensure_cursor_scroll();
         }
 
         // reset idle state
         state.idle_cycle_count = 0;
-
-        _render(tft);
     } else {
-        state.idle_cycle_count = (state.idle_cycle_count + 1) % IDLE_CYCLE_MAX;
+        switch (initial_character) {
+            case '\n':
+                // line-feed
+                state.cursor_row += 1;
+                _ensure_cursor_scroll();
+                break;
 
-        _render(tft);
+            case '\r':
+                // carriage-return
+                state.cursor_col = 0;
+                break;
+
+            default:
+                // nothing, just animate cursor
+                state.idle_cycle_count = (state.idle_cycle_count + 1) % IDLE_CYCLE_MAX;
+        }
     }
+
+    _render(tft);
 }
 
 void tintty_run(
