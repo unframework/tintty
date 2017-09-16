@@ -25,6 +25,7 @@ const int16_t IDLE_CYCLE_ON = 3000;
 const int16_t TAB_SIZE = 4;
 
 struct tintty_state {
+    // @todo consider storing cursor position as single int offset
     int16_t cursor_col, cursor_row;
     uint16_t bg_tft_color, fg_tft_color;
 
@@ -42,6 +43,7 @@ struct tintty_rendered {
     int16_t top_row;
 } rendered;
 
+// @todo support negative cursor_row
 void _render(TFT_ILI9163C *tft) {
     // if scrolling, prepare the "recycled" screen area
     if (state.top_row != rendered.top_row) {
@@ -249,7 +251,14 @@ void _main(
 
             case '\b':
                 // backspace
-                state.cursor_col = max(0, state.cursor_col - 1);
+                state.cursor_col -= 1;
+
+                if (state.cursor_col < 0) {
+                    state.cursor_col = max_col - 1;
+                    state.cursor_row -= 1;
+                    _ensure_cursor_vscroll();
+                }
+
                 break;
 
             case '\t':
