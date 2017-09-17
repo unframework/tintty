@@ -49,21 +49,21 @@ void test_buffer_puts(char* str) {
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600); // normal baud-rate
   // Serial1.begin(115200);
 
   tft.begin();
   // ili9340_init();
   // ili9340_setRotation(0);
 
-  test_buffer_puts("Hi!\nSecond\nThird\rStart\r\nt\te\ts\tt\bT\eM\eM1\b\eD2\eET\b\b\e[200B");
-  test_buffer_puts("\e[3;2f[3;2]");
-  test_buffer_puts("\e[14;9H[14;9]");
-  test_buffer_puts("\e[6;1H\e[32;40mSome \e[1mgreen\e[0;32m text\e[m (and back to \e[47;30mnormal\e[m)");
-  test_buffer_puts("\e7"); // save
-  test_buffer_puts("\e[14;20H\e[?7l0123456789\e[?7hnext line");
-  test_buffer_puts("\e[34l\e[?25h"); // cursor off and on
-  test_buffer_puts("\e8"); // restore
+//  test_buffer_puts("Hi!\nSecond\nThird\rStart\r\nt\te\ts\tt\bT\eM\eM1\b\eD2\eET\b\b\e[200B");
+//  test_buffer_puts("\e[3;2f[3;2]");
+//  test_buffer_puts("\e[14;9H[14;9]");
+//  test_buffer_puts("\e[6;1H\e[32;40mSome \e[1mgreen\e[0;32m text\e[m (and back to \e[47;30mnormal\e[m)");
+//  test_buffer_puts("\e7"); // save
+//  test_buffer_puts("\e[14;20H\e[?7l0123456789\e[?7hnext line");
+//  test_buffer_puts("\e[34l\e[?25h"); // cursor off and on
+//  test_buffer_puts("\e8"); // restore
 
   tintty_run(
     [=](){

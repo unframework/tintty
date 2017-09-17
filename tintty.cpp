@@ -611,6 +611,10 @@ void tintty_run(
     // initial render
     _render(tft);
 
+    // send CR to indicate that the screen is ready
+    // (this works with the agetty --wait-cr option to help wait until Arduino boots)
+    send_char('\r');
+
     // main read cycle
     while (1) {
         _main(peek_char, read_char, send_char, tft);
