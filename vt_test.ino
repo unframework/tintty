@@ -59,6 +59,7 @@ void setup() {
   test_buffer_puts("Hi!\nSecond\nThird\rStart\r\nt\te\ts\tt\bT\eM\eM1\b\eD2\eET\b\b\e[200B");
   test_buffer_puts("\e[3;2f[3;2]");
   test_buffer_puts("\e[14;9H[14;9]");
+  test_buffer_puts("\e[6;1H\e[32;40mSome green text\e[m (and back to normal)");
 
   tintty_run(
     [=](){

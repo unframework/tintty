@@ -19,6 +19,17 @@
 const int16_t screen_col_count = SCREEN_WIDTH / CHAR_WIDTH;
 const int16_t screen_row_count = SCREEN_HEIGHT / CHAR_HEIGHT;
 
+const uint16_t ANSI_COLORS[] = {
+    TFT_BLACK,
+    TFT_RED,
+    TFT_GREEN,
+    TFT_YELLOW,
+    TFT_BLUE,
+    TFT_MAGENTA,
+    TFT_CYAN,
+    TFT_WHITE
+};
+
 const int16_t IDLE_CYCLE_MAX = 6000;
 const int16_t IDLE_CYCLE_ON = 3000;
 
@@ -27,7 +38,7 @@ const int16_t TAB_SIZE = 4;
 struct tintty_state {
     // @todo consider storing cursor position as single int offset
     int16_t cursor_col, cursor_row;
-    uint16_t bg_tft_color, fg_tft_color;
+    uint16_t bg_ansi_color, fg_ansi_color;
 
     // @todo deal with integer overflow
     int16_t top_row; // first displayed row in a logical scrollback buffer
@@ -64,7 +75,7 @@ void _render(TFT_ILI9163C *tft) {
                     clear_sbuf_top + SCREEN_HEIGHT,
                     SCREEN_WIDTH,
                     -clear_sbuf_top,
-                    state.bg_tft_color
+                    ANSI_COLORS[state.bg_ansi_color]
                 );
             }
 
@@ -75,7 +86,7 @@ void _render(TFT_ILI9163C *tft) {
                     max(0, clear_sbuf_top),
                     SCREEN_WIDTH,
                     clear_sbuf_bottom - max(0, clear_sbuf_top),
-                    state.bg_tft_color
+                    ANSI_COLORS[state.bg_ansi_color]
                 );
             }
         }
@@ -93,8 +104,8 @@ void _render(TFT_ILI9163C *tft) {
             state.out_char_col * CHAR_WIDTH,
             (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
             state.out_char,
-            state.fg_tft_color,
-            state.bg_tft_color,
+            ANSI_COLORS[state.fg_ansi_color],
+            ANSI_COLORS[state.bg_ansi_color],
             1
         );
 
@@ -124,7 +135,7 @@ void _render(TFT_ILI9163C *tft) {
             (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
             CHAR_WIDTH,
             1,
-            state.bg_tft_color // @todo save the original background colour or even pixel values
+            ANSI_COLORS[state.bg_ansi_color] // @todo save the original background colour or even pixel values
         );
     }
 
@@ -136,8 +147,8 @@ void _render(TFT_ILI9163C *tft) {
         CHAR_WIDTH,
         1,
         state.idle_cycle_count < IDLE_CYCLE_ON
-            ? state.fg_tft_color
-            : state.bg_tft_color // @todo save the original background colour or even pixel values
+            ? ANSI_COLORS[state.fg_ansi_color]
+            : ANSI_COLORS[state.bg_ansi_color] // @todo save the original background colour or even pixel values
     );
 
     // save new rendered state
@@ -161,6 +172,37 @@ void _send_sequence(
     while (*str) {
         send_char(*str);
         str += 1;
+    }
+}
+
+void _apply_graphic_rendition(
+    uint16_t* arg_list,
+    uint16_t arg_count
+) {
+    if (arg_count == 0) {
+        // special case for resetting to default style
+        state.bg_ansi_color = 0;
+        state.fg_ansi_color = 7;
+
+        return;
+    }
+
+    // process commands
+    // @todo support bold/etc for better colour support
+    for (uint16_t arg_index = 0; arg_index < arg_count; arg_index += 1) {
+        const uint16_t arg_value = arg_list[arg_index];
+
+        if (arg_value == 0) {
+            // reset to default style
+            state.bg_ansi_color = 0;
+            state.fg_ansi_color = 7;
+        } else if (arg_value >= 30 && arg_value < 37) {
+            // foreground ANSI colour
+            state.fg_ansi_color = arg_value - 30;
+        } else if (arg_value >= 40 && arg_value < 47) {
+            // background ANSI colour
+            state.bg_ansi_color = arg_value - 40;
+        }
     }
 }
 
@@ -203,6 +245,11 @@ void _exec_escape_bracket_command_with_args(
             // Direct Cursor Addressing (row;col)
             state.cursor_col = max(0, min(screen_col_count - 1, ARG(1, 1) - 1));
             state.cursor_row = max(0, min(screen_row_count - 1, ARG(0, 1) - 1));
+            break;
+
+        case 'm':
+            // graphic rendition mode
+            _apply_graphic_rendition(arg_list, arg_count);
             break;
     }
 }
@@ -391,8 +438,8 @@ void tintty_run(
     state.cursor_col = 0;
     state.cursor_row = 0;
     state.top_row = 0;
-    state.fg_tft_color = TFT_WHITE;
-    state.bg_tft_color = TFT_BLACK;
+    state.bg_ansi_color = 0;
+    state.fg_ansi_color = 7;
 
     state.out_char = 0;
 
