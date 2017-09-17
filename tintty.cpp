@@ -197,6 +197,13 @@ void _exec_escape_bracket_command_with_args(
             // cursor left (no scroll)
             state.cursor_col = max(0, state.cursor_col - ARG(0, 1));
             break;
+
+        case 'H':
+        case 'f':
+            // Direct Cursor Addressing (row;col)
+            state.cursor_col = max(0, min(screen_col_count - 1, ARG(1, 1) - 1));
+            state.cursor_row = max(0, min(screen_row_count - 1, ARG(0, 1) - 1));
+            break;
     }
 }
 
