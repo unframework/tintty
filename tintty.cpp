@@ -171,41 +171,32 @@ void _exec_escape_bracket_command_with_args(
     uint16_t* arg_list,
     uint16_t arg_count
 ) {
+    // convenient arg getter
+    #define ARG(index, default_value) (arg_count > index ? arg_list[index] : default_value)
+
     // process next character after Escape-code, bracket and any numeric arguments
     const char command_character = read_char();
 
     switch (command_character) {
         case 'A':
             // cursor up (no scroll)
-            {
-                const uint16_t amount = (arg_count > 0 ? arg_list[0] : 1);
-                state.cursor_row = max(0, state.cursor_row - amount);
-                break;
-            }
+            state.cursor_row = max(0, state.cursor_row - ARG(0, 1));
+            break;
 
         case 'B':
             // cursor down (no scroll)
-            {
-                const uint16_t amount = (arg_count > 0 ? arg_list[0] : 1);
-                state.cursor_row = min(screen_row_count - 1, state.cursor_row + amount);
-                break;
-            }
+            state.cursor_row = min(screen_row_count - 1, state.cursor_row + ARG(0, 1));
+            break;
 
         case 'C':
             // cursor right (no scroll)
-            {
-                const uint16_t amount = (arg_count > 0 ? arg_list[0] : 1);
-                state.cursor_col = min(screen_col_count - 1, state.cursor_col + amount);
-                break;
-            }
+            state.cursor_col = min(screen_col_count - 1, state.cursor_col + ARG(0, 1));
+            break;
 
         case 'D':
             // cursor left (no scroll)
-            {
-                const uint16_t amount = (arg_count > 0 ? arg_list[0] : 1);
-                state.cursor_col = max(0, state.cursor_col - amount);
-                break;
-            }
+            state.cursor_col = max(0, state.cursor_col - ARG(0, 1));
+            break;
     }
 }
 
