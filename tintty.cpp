@@ -257,10 +257,10 @@ void _apply_graphic_rendition(
         } else if (arg_value == 1) {
             // bold
             state.bold = true;
-        } else if (arg_value >= 30 && arg_value < 37) {
+        } else if (arg_value >= 30 && arg_value <= 37) {
             // foreground ANSI colour
             state.fg_ansi_color = arg_value - 30;
-        } else if (arg_value >= 40 && arg_value < 47) {
+        } else if (arg_value >= 40 && arg_value <= 47) {
             // background ANSI colour
             state.bg_ansi_color = arg_value - 40;
         }
