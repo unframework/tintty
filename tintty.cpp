@@ -176,6 +176,21 @@ void _send_sequence(
     }
 }
 
+char _read_decimal(
+    char (*peek_char)(),
+    char (*read_char)()
+) {
+    uint16_t accumulator = 0;
+
+    while (isdigit(peek_char())) {
+        const char digit_character = read_char();
+        const uint16_t digit = digit_character - '0';
+        accumulator = accumulator * 10 + digit;
+    }
+
+    return accumulator;
+}
+
 void _apply_graphic_rendition(
     uint16_t* arg_list,
     uint16_t arg_count
@@ -213,12 +228,17 @@ void _exec_escape_question_command(
     char (*read_char)(),
     void (*send_char)(char ch)
 ) {
-    const char command_character = read_char();
+    // @todo unsure how multiple mode commands work
+    // ... per https://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html there might be several?
+    // ... and that means that the question mark is an argument prefix rather than a sub-command?
+    // ... that is, is '[?25;20;?7l' a valid Esc-command?
+    const uint16_t mode = _read_decimal(peek_char, read_char);
+    const bool mode_on = (read_char() != 'l');
 
-    switch (command_character) {
-        case '7':
+    switch (mode) {
+        case 7:
             // auto wrap mode
-            state.no_wrap = (read_char() == 'l');
+            state.no_wrap = !mode_on;
             break;
     }
 }
@@ -274,21 +294,6 @@ void _exec_escape_bracket_command_with_args(
             _apply_graphic_rendition(arg_list, arg_count);
             break;
     }
-}
-
-char _read_decimal(
-    char (*peek_char)(),
-    char (*read_char)()
-) {
-    uint16_t accumulator = 0;
-
-    while (isdigit(peek_char())) {
-        const char digit_character = read_char();
-        const uint16_t digit = digit_character - '0';
-        accumulator = accumulator * 10 + digit;
-    }
-
-    return accumulator;
 }
 
 void _exec_escape_bracket_command(
