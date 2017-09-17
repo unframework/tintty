@@ -228,10 +228,11 @@ void _exec_escape_question_command(
     char (*read_char)(),
     void (*send_char)(char ch)
 ) {
-    // @todo unsure how multiple mode commands work
-    // ... per https://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html there might be several?
-    // ... and that means that the question mark is an argument prefix rather than a sub-command?
-    // ... that is, is '[?25;20;?7l' a valid Esc-command?
+    // @todo support multiple mode commands
+    // per http://vt100.net/docs/vt220-rm/chapter4.html section 4.6.1,
+    // ANSI and DEC modes cannot mix; that is, '[?25;20;?7l' is not a valid Esc-command
+    // (noting this because https://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html
+    // makes it look like the question mark is a prefix)
     const uint16_t mode = _read_decimal(peek_char, read_char);
     const bool mode_on = (read_char() != 'l');
 
@@ -301,13 +302,13 @@ void _exec_escape_bracket_command(
     char (*read_char)(),
     void (*send_char)(char ch)
 ) {
-    const uint16_t MAX_COMMAND_ARG_COUNT = 4;
+    const uint16_t MAX_COMMAND_ARG_COUNT = 10;
     uint16_t arg_list[MAX_COMMAND_ARG_COUNT];
     uint16_t arg_count = 0;
 
     // start parsing arguments if any
     // (this means that '' is treated as no arguments, but '0;' is treated as two arguments, each being zero)
-    // @todo handle leading semi-colon as empty arg?
+    // @todo ignore trailing semi-colon instead of treating it as marking an extra zero arg?
     if (isdigit(peek_char())) {
         // keep consuming arguments while we have space
         while (arg_count < MAX_COMMAND_ARG_COUNT) {
