@@ -42,6 +42,7 @@ struct tintty_state {
 
     // @todo deal with integer overflow
     int16_t top_row; // first displayed row in a logical scrollback buffer
+    bool no_wrap;
 
     char out_char;
     int16_t out_char_col, out_char_row;
@@ -189,6 +190,7 @@ void _apply_graphic_rendition(
 
     // process commands
     // @todo support bold/etc for better colour support
+    // @todo 39/49?
     for (uint16_t arg_index = 0; arg_index < arg_count; arg_index += 1) {
         const uint16_t arg_value = arg_list[arg_index];
 
@@ -206,6 +208,21 @@ void _apply_graphic_rendition(
     }
 }
 
+void _exec_escape_question_command(
+    char (*peek_char)(),
+    char (*read_char)(),
+    void (*send_char)(char ch)
+) {
+    const char command_character = read_char();
+
+    switch (command_character) {
+        case '7':
+            // auto wrap mode
+            state.no_wrap = (read_char() == 'l');
+            break;
+    }
+}
+
 void _exec_escape_bracket_command_with_args(
     char (*peek_char)(),
     char (*read_char)(),
@@ -220,6 +237,11 @@ void _exec_escape_bracket_command_with_args(
     const char command_character = read_char();
 
     switch (command_character) {
+        case '?':
+            // question-mark commands
+            _exec_escape_question_command(peek_char, read_char, send_char);
+            break;
+
         case 'A':
             // cursor up (no scroll)
             state.cursor_row = max(0, state.cursor_row - ARG(0, 1));
@@ -372,9 +394,13 @@ void _main(
         state.cursor_col += 1;
 
         if (state.cursor_col >= screen_col_count) {
-            state.cursor_col = 0;
-            state.cursor_row += 1;
-            _ensure_cursor_vscroll();
+            if (state.no_wrap) {
+                state.cursor_col = screen_col_count - 1;
+            } else {
+                state.cursor_col = 0;
+                state.cursor_row += 1;
+                _ensure_cursor_vscroll();
+            }
         }
 
         // reset idle state
@@ -398,9 +424,13 @@ void _main(
                 state.cursor_col -= 1;
 
                 if (state.cursor_col < 0) {
-                    state.cursor_col = screen_col_count - 1;
-                    state.cursor_row -= 1;
-                    _ensure_cursor_vscroll();
+                    if (state.no_wrap) {
+                        state.cursor_col = 0;
+                    } else {
+                        state.cursor_col = screen_col_count - 1;
+                        state.cursor_row -= 1;
+                        _ensure_cursor_vscroll();
+                    }
                 }
 
                 break;
@@ -438,6 +468,7 @@ void tintty_run(
     state.cursor_col = 0;
     state.cursor_row = 0;
     state.top_row = 0;
+    state.no_wrap = 0;
     state.bg_ansi_color = 0;
     state.fg_ansi_color = 7;
 
