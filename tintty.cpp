@@ -2,13 +2,13 @@
 #include <TFT_ILI9163C.h>
 
 #define TFT_BLACK   0x0000
-#define TFT_BLUE    0x0010
-#define TFT_RED     0x8000
-#define TFT_GREEN   0x0400
-#define TFT_CYAN    0x0410
-#define TFT_MAGENTA 0x8010
-#define TFT_YELLOW  0x8400
-#define TFT_WHITE   0xC618
+#define TFT_BLUE    0x0014
+#define TFT_RED     0xA000
+#define TFT_GREEN   0x0500
+#define TFT_CYAN    0x0514
+#define TFT_MAGENTA 0xA014
+#define TFT_YELLOW  0xA500
+#define TFT_WHITE   0xA514
 
 #define TFT_BOLD_BLACK   0x8410
 #define TFT_BOLD_BLUE    0x001F
@@ -40,6 +40,17 @@ const uint16_t ANSI_COLORS[] = {
     TFT_WHITE
 };
 
+const uint16_t ANSI_BOLD_COLORS[] = {
+    TFT_BOLD_BLACK,
+    TFT_BOLD_RED,
+    TFT_BOLD_GREEN,
+    TFT_BOLD_YELLOW,
+    TFT_BOLD_BLUE,
+    TFT_BOLD_MAGENTA,
+    TFT_BOLD_CYAN,
+    TFT_BOLD_WHITE
+};
+
 const int16_t IDLE_CYCLE_MAX = 25000;
 const int16_t IDLE_CYCLE_ON = 12500;
 
@@ -49,10 +60,11 @@ struct tintty_state {
     // @todo consider storing cursor position as single int offset
     int16_t cursor_col, cursor_row;
     uint16_t bg_ansi_color, fg_ansi_color;
+    bool bold;
 
     // saved DEC cursor info (in screen coords)
     int16_t dec_saved_col, dec_saved_row, dec_saved_bg, dec_saved_fg;
-    bool dec_saved_no_wrap;
+    bool dec_saved_bold, dec_saved_no_wrap;
 
     // @todo deal with integer overflow
     int16_t top_row; // first displayed row in a logical scrollback buffer
@@ -80,6 +92,7 @@ void _render(TFT_ILI9163C *tft) {
         // @todo handle scroll-up
         if (row_delta > 0) {
             // pre-clear the lines at the bottom
+            // @todo always use black instead of current background colour?
             int16_t clear_height = min(SCREEN_HEIGHT, row_delta * CHAR_HEIGHT);
             int16_t clear_sbuf_bottom = (state.top_row * CHAR_HEIGHT + SCREEN_HEIGHT) % SCREEN_HEIGHT;
             int16_t clear_sbuf_top = clear_sbuf_bottom - clear_height;
@@ -120,7 +133,7 @@ void _render(TFT_ILI9163C *tft) {
             state.out_char_col * CHAR_WIDTH,
             (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
             state.out_char,
-            ANSI_COLORS[state.fg_ansi_color],
+            state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color],
             ANSI_COLORS[state.bg_ansi_color],
             1
         );
@@ -173,7 +186,7 @@ void _render(TFT_ILI9163C *tft) {
                 (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
                 CHAR_WIDTH,
                 1,
-                ANSI_COLORS[state.fg_ansi_color] // @todo save the original background colour or even pixel values
+                state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color]
             );
 
             // save new rendered state
@@ -225,6 +238,7 @@ void _apply_graphic_rendition(
         // special case for resetting to default style
         state.bg_ansi_color = 0;
         state.fg_ansi_color = 7;
+        state.bold = false;
 
         return;
     }
@@ -239,6 +253,10 @@ void _apply_graphic_rendition(
             // reset to default style
             state.bg_ansi_color = 0;
             state.fg_ansi_color = 7;
+            state.bold = false;
+        } else if (arg_value == 1) {
+            // bold
+            state.bold = true;
         } else if (arg_value >= 30 && arg_value < 37) {
             // foreground ANSI colour
             state.fg_ansi_color = arg_value - 30;
@@ -454,6 +472,7 @@ void _exec_escape_code(
             state.dec_saved_row = state.cursor_row - state.top_row; // relative to top
             state.dec_saved_bg = state.bg_ansi_color;
             state.dec_saved_fg = state.fg_ansi_color;
+            state.dec_saved_bold = state.bold;
             state.dec_saved_no_wrap = state.no_wrap;
             break;
 
@@ -463,6 +482,7 @@ void _exec_escape_code(
             state.cursor_row = state.dec_saved_row + state.top_row; // relative to top
             state.bg_ansi_color = state.dec_saved_bg;
             state.fg_ansi_color = state.dec_saved_fg;
+            state.bold = state.dec_saved_bold;
             state.no_wrap = state.dec_saved_no_wrap;
             break;
 
@@ -569,11 +589,13 @@ void tintty_run(
     state.cursor_hidden = 0;
     state.bg_ansi_color = 0;
     state.fg_ansi_color = 7;
+    state.bold = false;
 
     state.dec_saved_col = 0;
     state.dec_saved_row = 0;
     state.dec_saved_bg = state.bg_ansi_color;
     state.dec_saved_fg = state.fg_ansi_color;
+    state.dec_saved_bold = state.bold;
     state.dec_saved_no_wrap = false;
 
     state.out_char = 0;
