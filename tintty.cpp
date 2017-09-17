@@ -104,8 +104,8 @@ void _render(TFT_ILI9163C *tft) {
         // the char draw may overpaint the cursor, in which case
         // mark it for repaint
         if (
-            rendered.cursor_col == state.cursor_col &&
-            rendered.cursor_row == state.cursor_row
+            rendered.cursor_col == state.out_char_col &&
+            rendered.cursor_row == state.out_char_row
         ) {
             rendered.cursor_col = -1;
         }
