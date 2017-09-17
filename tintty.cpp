@@ -1,13 +1,23 @@
 // @todo move out direct TFT references
 #include <TFT_ILI9163C.h>
+
 #define TFT_BLACK   0x0000
-#define TFT_BLUE    0x001F
-#define TFT_RED     0xF800
-#define TFT_GREEN   0x07E0
-#define TFT_CYAN    0x07FF
-#define TFT_MAGENTA 0xF81F
-#define TFT_YELLOW  0xFFE0
-#define TFT_WHITE   0xFFFF
+#define TFT_BLUE    0x0010
+#define TFT_RED     0x8000
+#define TFT_GREEN   0x0400
+#define TFT_CYAN    0x0410
+#define TFT_MAGENTA 0x8010
+#define TFT_YELLOW  0x8400
+#define TFT_WHITE   0xC618
+
+#define TFT_BOLD_BLACK   0x8410
+#define TFT_BOLD_BLUE    0x001F
+#define TFT_BOLD_RED     0xF800
+#define TFT_BOLD_GREEN   0x07E0
+#define TFT_BOLD_CYAN    0x07FF
+#define TFT_BOLD_MAGENTA 0xF81F
+#define TFT_BOLD_YELLOW  0xFFE0
+#define TFT_BOLD_WHITE   0xFFFF
 
 #include "tintty.h"
 
