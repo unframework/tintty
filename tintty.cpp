@@ -30,8 +30,8 @@ const uint16_t ANSI_COLORS[] = {
     TFT_WHITE
 };
 
-const int16_t IDLE_CYCLE_MAX = 6000;
-const int16_t IDLE_CYCLE_ON = 3000;
+const int16_t IDLE_CYCLE_MAX = 25000;
+const int16_t IDLE_CYCLE_ON = 12500;
 
 const int16_t TAB_SIZE = 4;
 
@@ -43,6 +43,7 @@ struct tintty_state {
     // @todo deal with integer overflow
     int16_t top_row; // first displayed row in a logical scrollback buffer
     bool no_wrap;
+    bool cursor_hidden;
 
     char out_char;
     int16_t out_char_col, out_char_row;
@@ -123,38 +124,49 @@ void _render(TFT_ILI9163C *tft) {
         }
     }
 
-    // clear old cursor unless it was not shown
-    if (
-        rendered.cursor_col >= 0 &&
-        (
-            rendered.cursor_col != state.cursor_col ||
-            rendered.cursor_row != state.cursor_row
-        )
-    ) {
-        tft->fillRect(
-            rendered.cursor_col * CHAR_WIDTH,
-            (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
-            CHAR_WIDTH,
-            1,
-            ANSI_COLORS[state.bg_ansi_color] // @todo save the original background colour or even pixel values
-        );
-    }
-
-    // reflect new cursor position on screen
-    // (always redraw cursor to animate)
-    tft->fillRect(
-        state.cursor_col * CHAR_WIDTH,
-        (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
-        CHAR_WIDTH,
-        1,
+    // reflect new cursor bar render state
+    const bool cursor_bar_shown = (
+        !state.cursor_hidden &&
         state.idle_cycle_count < IDLE_CYCLE_ON
-            ? ANSI_COLORS[state.fg_ansi_color]
-            : ANSI_COLORS[state.bg_ansi_color] // @todo save the original background colour or even pixel values
     );
 
-    // save new rendered state
-    rendered.cursor_col = state.cursor_col;
-    rendered.cursor_row = state.cursor_row;
+    // clear existing rendered cursor bar if needed
+    if (rendered.cursor_col >= 0) {
+        if (
+            !cursor_bar_shown ||
+            rendered.cursor_col != state.cursor_col ||
+            rendered.cursor_row != state.cursor_row
+        ) {
+            tft->fillRect(
+                rendered.cursor_col * CHAR_WIDTH,
+                (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
+                CHAR_WIDTH,
+                1,
+                ANSI_COLORS[state.bg_ansi_color] // @todo save the original background colour or even pixel values
+            );
+
+            // record the fact that cursor bar is not on screen
+            rendered.cursor_col = -1;
+        }
+    }
+
+    // render new cursor bar if not already shown
+    // (sometimes right after clearing existing bar)
+    if (rendered.cursor_col < 0) {
+        if (cursor_bar_shown) {
+            tft->fillRect(
+                state.cursor_col * CHAR_WIDTH,
+                (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
+                CHAR_WIDTH,
+                1,
+                ANSI_COLORS[state.fg_ansi_color] // @todo save the original background colour or even pixel values
+            );
+
+            // save new rendered state
+            rendered.cursor_col = state.cursor_col;
+            rendered.cursor_row = state.cursor_row;
+        }
+    }
 }
 
 void _ensure_cursor_vscroll() {
@@ -223,6 +235,29 @@ void _apply_graphic_rendition(
     }
 }
 
+void _apply_mode_setting(
+    bool mode_on,
+    uint16_t* arg_list,
+    uint16_t arg_count
+) {
+    // process modes
+    for (uint16_t arg_index = 0; arg_index < arg_count; arg_index += 1) {
+        const uint16_t mode_id = arg_list[arg_index];
+
+        switch (mode_id) {
+            case 20:
+                // auto-LF
+                // @todo this
+                break;
+
+            case 34:
+                // cursor visibility
+                state.cursor_hidden = !mode_on;
+                break;
+        }
+    }
+}
+
 void _exec_escape_question_command(
     char (*peek_char)(),
     char (*read_char)(),
@@ -240,6 +275,11 @@ void _exec_escape_question_command(
         case 7:
             // auto wrap mode
             state.no_wrap = !mode_on;
+            break;
+
+        case 25:
+            // cursor visibility
+            state.cursor_hidden = !mode_on;
             break;
     }
 }
@@ -293,6 +333,16 @@ void _exec_escape_bracket_command_with_args(
         case 'm':
             // graphic rendition mode
             _apply_graphic_rendition(arg_list, arg_count);
+            break;
+
+        case 'h':
+            // set mode
+            _apply_mode_setting(true, arg_list, arg_count);
+            break;
+
+        case 'l':
+            // unset mode
+            _apply_mode_setting(false, arg_list, arg_count);
             break;
     }
 }
@@ -475,6 +525,7 @@ void tintty_run(
     state.cursor_row = 0;
     state.top_row = 0;
     state.no_wrap = 0;
+    state.cursor_hidden = 0;
     state.bg_ansi_color = 0;
     state.fg_ansi_color = 7;
 
