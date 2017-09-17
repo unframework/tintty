@@ -40,6 +40,10 @@ struct tintty_state {
     int16_t cursor_col, cursor_row;
     uint16_t bg_ansi_color, fg_ansi_color;
 
+    // saved DEC cursor info (in screen coords)
+    int16_t dec_saved_col, dec_saved_row, dec_saved_bg, dec_saved_fg;
+    bool dec_saved_no_wrap;
+
     // @todo deal with integer overflow
     int16_t top_row; // first displayed row in a logical scrollback buffer
     bool no_wrap;
@@ -424,6 +428,25 @@ void _exec_escape_code(
             _send_sequence(send_char, "\e[?1;0c"); // DA response: no options
             break;
 
+        case '7':
+            // save cursor
+            // @todo verify that the screen-relative coordinate approach is valid
+            state.dec_saved_col = state.cursor_col;
+            state.dec_saved_row = state.cursor_row - state.top_row; // relative to top
+            state.dec_saved_bg = state.bg_ansi_color;
+            state.dec_saved_fg = state.fg_ansi_color;
+            state.dec_saved_no_wrap = state.no_wrap;
+            break;
+
+        case '8':
+            // restore cursor
+            state.cursor_col = state.dec_saved_col;
+            state.cursor_row = state.dec_saved_row + state.top_row; // relative to top
+            state.bg_ansi_color = state.dec_saved_bg;
+            state.fg_ansi_color = state.dec_saved_fg;
+            state.no_wrap = state.dec_saved_no_wrap;
+            break;
+
         default:
             // unrecognized character
             // @todo signal bell?
@@ -528,6 +551,12 @@ void tintty_run(
     state.cursor_hidden = 0;
     state.bg_ansi_color = 0;
     state.fg_ansi_color = 7;
+
+    state.dec_saved_col = 0;
+    state.dec_saved_row = 0;
+    state.dec_saved_bg = state.bg_ansi_color;
+    state.dec_saved_fg = state.fg_ansi_color;
+    state.dec_saved_no_wrap = false;
 
     state.out_char = 0;
 

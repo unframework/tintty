@@ -60,8 +60,10 @@ void setup() {
   test_buffer_puts("\e[3;2f[3;2]");
   test_buffer_puts("\e[14;9H[14;9]");
   test_buffer_puts("\e[6;1H\e[32;40mSome green text\e[m (and back to normal)");
+  test_buffer_puts("\e7"); // save
   test_buffer_puts("\e[14;20H\e[?7l0123456789\e[?7hnext line");
   test_buffer_puts("\e[34l\e[?25h"); // cursor off and on
+  test_buffer_puts("\e8"); // restore
 
   tintty_run(
     [=](){
