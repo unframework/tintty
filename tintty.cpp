@@ -249,9 +249,15 @@ void _apply_mode_setting(
         const uint16_t mode_id = arg_list[arg_index];
 
         switch (mode_id) {
+            case 4:
+                // insert/replace mode
+                // @todo this should be off for most practical purposes anyway?
+                // ... otherwise visually shifting line text is expensive
+                break;
+
             case 20:
                 // auto-LF
-                // @todo this
+                // ignoring per http://vt100.net/docs/vt220-rm/chapter4.html section 4.6.6
                 break;
 
             case 34:
@@ -288,6 +294,7 @@ void _exec_escape_question_command(
     }
 }
 
+// @todo cursor position report
 void _exec_escape_bracket_command_with_args(
     char (*peek_char)(),
     char (*read_char)(),
@@ -389,6 +396,8 @@ void _exec_escape_bracket_command(
     );
 }
 
+// @todo terminal reset
+// @todo parse modes with arguments even if they are no-op
 void _exec_escape_code(
     char (*peek_char)(),
     char (*read_char)(),
@@ -448,8 +457,7 @@ void _exec_escape_code(
             break;
 
         default:
-            // unrecognized character
-            // @todo signal bell?
+            // unrecognized character, silently ignore
             break;
     }
 }
