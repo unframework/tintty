@@ -48,7 +48,12 @@ void test_buffer_puts(char* str) {
   }
 }
 
+const int key_pin_cr = 2;
+
 void setup() {
+  // initialize input pin
+  pinMode(key_pin_cr, INPUT);
+
   Serial.begin(9600); // normal baud-rate
   // Serial1.begin(115200);
 
@@ -82,6 +87,12 @@ void setup() {
         test_buffer_cursor += 1;
 
         return ch;
+      }
+
+      // process ersatz keyboard input
+      // @todo add explicit "get hardware input" hook to the library
+      if (digitalRead(key_pin_cr) == HIGH) {
+        Serial.write('!');
       }
 
       // fall back to normal serial input
