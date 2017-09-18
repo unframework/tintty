@@ -79,7 +79,7 @@ void setup() {
 
       // fall back to normal blocking serial input
       while (Serial.available() < 1) {
-        delay(1); // @todo invoke terminal idle hook
+        tintty_idle(&tft);
       }
 
       return (char)Serial.peek();
@@ -101,7 +101,7 @@ void setup() {
 
       // fall back to normal blocking serial input
       while (Serial.available() < 1) {
-        delay(1); // @todo invoke terminal idle hook
+        tintty_idle(&tft);
       }
 
       return (char)Serial.read();

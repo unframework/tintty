@@ -620,3 +620,13 @@ void tintty_run(
         _main(peek_char, read_char, send_char, tft);
     }
 }
+
+void tintty_idle(
+    TFT_ILI9163C *tft
+) {
+    // animate cursor
+    state.idle_cycle_count = (state.idle_cycle_count + 1) % IDLE_CYCLE_MAX;
+
+    // re-render
+    _render(tft);
+}
