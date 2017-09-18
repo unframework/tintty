@@ -36,3 +36,22 @@ Because the Arduino has to spend some time booting and setting up, the sketch em
 To terminate getty from the original root shell, just do a normal `kill [pid]` command - it still responds to external SIGTERM.
 
 One fun observation is that resetting the Arduino board will make getty re-prompt for login: it detects lost carrier signal in the serial device, terminates the existing login shell and dutifully waits for terminal availability (and the CR character) again. By the time the sketch boots up after reset, getty is there to listen to it and prompt for login.
+
+## References
+
+Existing AVR-based implementation as initial inspiration:
+
+- https://github.com/mkschreder/avr-vt100 (and updated version https://bitbucket.org/scargill/experimental-terminal/src)
+
+General VT100/ANSI docs:
+
+- http://vt100.net/docs/vt100-ug/chapter3.html
+- http://vt100.net/docs/vt220-rm/chapter4.html
+- https://www.gnu.org/software/screen/manual/html_node/Control-Sequences.html#Control-Sequences
+- https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+
+Other interesting implementations I found:
+
+- http://www.msarnoff.org/terminalscope/ (https://github.com/74hc595/Terminalscope)
+- https://madresistor.com/diy-vt100/ (https://gitlab.com/madresistor/diy-vt100-firmware)
+- http://geoffg.net/terminal.html
