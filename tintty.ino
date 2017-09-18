@@ -77,7 +77,11 @@ void setup() {
         return test_buffer[test_buffer_cursor];
       }
 
-      // fall back to normal serial input
+      // fall back to normal blocking serial input
+      while (Serial.available() < 1) {
+        delay(1); // @todo invoke terminal idle hook
+      }
+
       return (char)Serial.peek();
     },
     [=](){
@@ -95,7 +99,11 @@ void setup() {
         Serial.write('!');
       }
 
-      // fall back to normal serial input
+      // fall back to normal blocking serial input
+      while (Serial.available() < 1) {
+        delay(1); // @todo invoke terminal idle hook
+      }
+
       return (char)Serial.read();
     },
     [=](char ch){ Serial.print(ch); },
