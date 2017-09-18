@@ -35,12 +35,12 @@ uint8_t  charStart=1;
 TFT_ILI9163C tft = TFT_ILI9163C(10, 8, 9);
 
 // buffer to test various input sequences
-char test_buffer[1024];
+char test_buffer[256];
 uint8_t test_buffer_length = 0;
 uint8_t test_buffer_cursor = 0;
 
 void test_buffer_puts(char* str) {
-  while (*str) {
+  while (*str && test_buffer_length < sizeof(test_buffer)) {
     test_buffer[test_buffer_length] = *str;
     test_buffer_length += 1;
 
