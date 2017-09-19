@@ -32,7 +32,10 @@ uint32_t charShadow=0;
 uint8_t  charStart=1;
 */
 
-TFT_ILI9163C tft = TFT_ILI9163C(10, 8, 9);
+// this is following a tutorial-recommended pinout, but changing
+// the SPI CS and RS pins for the TFT to be 5 and 4 to avoid
+// device conflict with USB Host Shield
+TFT_ILI9163C tft = TFT_ILI9163C(5, 8, 4);
 
 // buffer to test various input sequences
 char test_buffer[256];
