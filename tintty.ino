@@ -7,8 +7,12 @@
  */
 
 #include <SPI.h>
+
 #include <Adafruit_GFX.h>
 #include <TFT_ILI9163C.h>
+
+#include <Usb.h>
+#include <hidboot.h>
 
 #include "tintty.h"
 
@@ -16,6 +20,34 @@
 // the SPI CS and RS pins for the TFT to be 5 and 4 to avoid
 // device conflict with USB Host Shield
 TFT_ILI9163C tft = TFT_ILI9163C(5, 8, 4);
+
+// USB Host Shield connection
+USB Usb;
+HIDBoot<USB_HID_PROTOCOL_KEYBOARD> Keyboard(&Usb);
+
+class TinTTYKeyboardParser : public KeyboardReportParser {
+protected:
+    virtual void OnKeyDown(uint8_t mod, uint8_t key);
+    virtual void OnKeyPressed(uint8_t key);
+};
+
+void TinTTYKeyboardParser::OnKeyDown(uint8_t mod, uint8_t key) {
+    uint8_t asciiChar = OemToAscii(mod, key);
+
+    if (asciiChar) {
+        OnKeyPressed(asciiChar);
+    }
+}
+
+void TinTTYKeyboardParser::OnKeyPressed(uint8_t asciiChar) {
+    // send character as is, correcting 0x13 (DC3) into 0x0D (CR)
+    Serial.print((char)(asciiChar == 0x13
+        ? 0x0D
+        : asciiChar
+    ));
+};
+
+TinTTYKeyboardParser tinTTYKeyboardParser;
 
 // buffer to test various input sequences
 char test_buffer[256];
@@ -35,6 +67,10 @@ void setup() {
   Serial.begin(9600); // normal baud-rate
 
   tft.begin();
+
+  Usb.Init();
+  delay(200);
+  Keyboard.SetReportParser(0, (HIDReportParser*)&tinTTYKeyboardParser); // @todo needs delay?
 
 //  test_buffer_puts("Hi!\nSecond\nThird\rStart\r\nt\te\ts\tt\bT\eM\eM1\b\eD2\eET\b\b\e[200B");
 //  test_buffer_puts("\e[3;2f[3;2]");
@@ -71,6 +107,8 @@ void setup() {
       // fall back to normal blocking serial input
       while (Serial.available() < 1) {
         tintty_idle(&tft);
+
+        Usb.Task(); // @todo move?
       }
 
       return (char)Serial.read();
