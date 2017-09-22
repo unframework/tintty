@@ -73,6 +73,7 @@ struct tintty_state {
 
     char out_char;
     int16_t out_char_col, out_char_row;
+    int16_t out_clear_before, out_clear_after;
 
     int16_t idle_cycle_count; // @todo track during blocking reads mid-command
 } state;
@@ -138,8 +139,58 @@ void _render(TFT_ILI9163C *tft) {
             1
         );
 
+        // line-before
+        if (state.out_clear_before > 0) {
+            const int16_t line_before_chars = min(state.out_char_col, state.out_clear_before);
+            const int16_t lines_before = (state.out_clear_before - line_before_chars) / screen_col_count;
+
+            tft->fillRect(
+                (state.out_char_col - line_before_chars) * CHAR_WIDTH,
+                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                line_before_chars * CHAR_WIDTH,
+                CHAR_HEIGHT,
+                ANSI_COLORS[state.bg_ansi_color]
+            );
+
+            for (int16_t i = 0; i < lines_before; i += 1) {
+                tft->fillRect(
+                    0,
+                    ((state.out_char_row - 1 - i) * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                    SCREEN_WIDTH,
+                    CHAR_HEIGHT,
+                    ANSI_COLORS[state.bg_ansi_color]
+                );
+            }
+        }
+
+        // line-after
+        if (state.out_clear_after > 0) {
+            const int16_t line_after_chars = min(screen_col_count - 1 - state.out_char_col, state.out_clear_after);
+            const int16_t lines_after = (state.out_clear_after - line_after_chars) / screen_col_count;
+
+            tft->fillRect(
+                (state.out_char_col + 1) * CHAR_WIDTH,
+                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                line_after_chars * CHAR_WIDTH,
+                CHAR_HEIGHT,
+                ANSI_COLORS[state.bg_ansi_color]
+            );
+
+            for (int16_t i = 0; i < lines_after; i += 1) {
+                tft->fillRect(
+                    0,
+                    ((state.out_char_row + 1 + i) * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                    SCREEN_WIDTH,
+                    CHAR_HEIGHT,
+                    ANSI_COLORS[state.bg_ansi_color]
+                );
+            }
+        }
+
         // clear for next render
         state.out_char = 0;
+        state.out_clear_before = 0;
+        state.out_clear_after = 0;
 
         // the char draw may overpaint the cursor, in which case
         // mark it for repaint
@@ -367,6 +418,36 @@ void _exec_escape_bracket_command_with_args(
             // Direct Cursor Addressing (row;col)
             state.cursor_col = max(0, min(screen_col_count - 1, ARG(1, 1) - 1));
             state.cursor_row = max(0, min(screen_row_count - 1, ARG(0, 1) - 1));
+            break;
+
+        case 'J':
+            // clear screen
+            state.out_char = ' ';
+            state.out_char_col = state.cursor_col;
+            state.out_char_row = state.cursor_row;
+
+            state.out_clear_before = ARG(0, 0) != 0
+                ? state.cursor_row * screen_col_count + state.cursor_col
+                : 0;
+            state.out_clear_after = ARG(0, 0) != 1
+                ? (screen_row_count - 1 - state.cursor_row) * screen_col_count + (screen_col_count - 1 - state.cursor_col)
+                : 0;
+
+            break;
+
+        case 'K':
+            // clear screen
+            state.out_char = ' ';
+            state.out_char_col = state.cursor_col;
+            state.out_char_row = state.cursor_row;
+
+            state.out_clear_before = ARG(0, 0) != 0
+                ? state.cursor_col
+                : 0;
+            state.out_clear_after = ARG(0, 0) != 1
+                ? screen_col_count - 1 - state.cursor_col
+                : 0;
+
             break;
 
         case 'm':
