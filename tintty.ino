@@ -92,6 +92,7 @@ void setup() {
     [=](){
       // first peek from the test buffer
       if (test_buffer_cursor < test_buffer_length) {
+        tintty_idle(&tft);
         return test_buffer[test_buffer_cursor];
       }
 
@@ -105,6 +106,10 @@ void setup() {
     [=](){
       // first read from the test buffer
       if (test_buffer_cursor < test_buffer_length) {
+        tintty_idle(&tft);
+
+        Usb.Task(); // @todo move?
+
         char ch = test_buffer[test_buffer_cursor];
         test_buffer_cursor += 1;
 
