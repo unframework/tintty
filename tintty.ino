@@ -37,6 +37,17 @@ protected:
 };
 
 void TinTTYKeyboardParser::OnKeyDown(uint8_t mod, uint8_t key) {
+    // process control keys because they are not supported by AVR UsbHost?
+    if (mod & 0x11) {
+        // Ctrl + [A-Z]
+        // per https://github.com/arduino/ArduinoCore-samd/commit/0be91985fd090855e3157a8729d88cc608ed90f2
+        if (key >= 0x04 && key <= 0x1d)  {
+            OnKeyPressed(key - 3);
+        }
+
+        return;
+    }
+
     uint8_t asciiChar = OemToAscii(mod, key);
 
     if (asciiChar) {
