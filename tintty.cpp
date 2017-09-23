@@ -56,6 +56,9 @@ const int16_t IDLE_CYCLE_ON = 12500;
 
 const int16_t TAB_SIZE = 4;
 
+// @todo this better
+#include <glcdfont.c>
+
 struct tintty_state {
     // @todo consider storing cursor position as single int offset
     int16_t cursor_col, cursor_row;
@@ -130,14 +133,40 @@ void _render(TFT_ILI9163C *tft) {
 
     // render character if needed
     if (state.out_char != 0) {
-        tft->drawChar(
-            state.out_char_col * CHAR_WIDTH,
-            (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
-            state.out_char,
-            state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color],
-            ANSI_COLORS[state.bg_ansi_color],
-            1
+        const uint8_t x = state.out_char_col * CHAR_WIDTH;
+        const uint8_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT;
+        const uint16_t fg_tft_color = state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color];
+        const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
+
+        tft->startPushData(
+            x,
+            y,
+            x + 5,
+            y + 7
         );
+
+        // logic inspired by Adafruit_GFX but optimized for TFT data push
+        // even though this forces a Flash access per each pixel, it is still faster than stock
+        const int char_base = state.out_char * 5;
+
+        for (int char_font_row = 0; char_font_row < 8; char_font_row++) {
+            const unsigned char font_vline_mask = 1 << char_font_row;
+
+            for (int char_font_col = 0; char_font_col < 5; char_font_col++) {
+                const unsigned char font_vline = pgm_read_byte(&font[char_base + char_font_col]);
+
+                tft->pushData(
+                    font_vline & font_vline_mask
+                        ? fg_tft_color
+                        : bg_tft_color
+                );
+            }
+
+            // char spacing
+            tft->pushData(0);
+        }
+
+        tft->endPushData();
 
         // line-before
         if (state.out_clear_before > 0) {
