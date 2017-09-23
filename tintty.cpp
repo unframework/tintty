@@ -395,12 +395,12 @@ void _exec_escape_bracket_command_with_args(
 
         case 'A':
             // cursor up (no scroll)
-            state.cursor_row = max(0, state.cursor_row - ARG(0, 1));
+            state.cursor_row = max(state.top_row, state.cursor_row - ARG(0, 1));
             break;
 
         case 'B':
             // cursor down (no scroll)
-            state.cursor_row = min(screen_row_count - 1, state.cursor_row + ARG(0, 1));
+            state.cursor_row = min(state.top_row + screen_row_count - 1, state.cursor_row + ARG(0, 1));
             break;
 
         case 'C':
