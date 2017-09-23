@@ -33,6 +33,12 @@ Because the Arduino has to spend some time booting and setting up, the sketch em
 /sbin/getty -L --wait-cr ttyS0 &
 ```
 
+Inside the console, once logged-in, run the sizing command, since the screen is non-standard:
+
+```
+stty rows 16 columns 21
+```
+
 To terminate getty from the original root shell, just do a normal `kill [pid]` command - it still responds to external SIGTERM.
 
 One fun observation is that resetting the Arduino board will make getty re-prompt for login: it detects lost carrier signal in the serial device, terminates the existing login shell and dutifully waits for terminal availability (and the CR character) again. By the time the sketch boots up after reset, getty is there to listen to it and prompt for login.
