@@ -14,6 +14,11 @@
 #include <Usb.h>
 #include <hidboot.h>
 
+// extras from https://github.com/arduino/ArduinoCore-samd/commit/0be91985fd090855e3157a8729d88cc608ed90f2
+#define UHS_HID_BOOT_KEY_ESCAPE 0x29
+#define UHS_HID_BOOT_KEY_DELETE 0x2a
+#define UHS_HID_BOOT_KEY_TAB 0x2b
+
 #include "tintty.h"
 
 // this is following a tutorial-recommended pinout, but changing
@@ -36,6 +41,21 @@ void TinTTYKeyboardParser::OnKeyDown(uint8_t mod, uint8_t key) {
 
     if (asciiChar) {
         OnKeyPressed(asciiChar);
+    } else {
+        // extra unsupported characters
+        switch (key) {
+            case UHS_HID_BOOT_KEY_ESCAPE:
+                OnKeyPressed('\e');
+                break;
+
+            case UHS_HID_BOOT_KEY_DELETE:
+                OnKeyPressed('\b');
+                break;
+
+            case UHS_HID_BOOT_KEY_TAB:
+                OnKeyPressed('\t');
+                break;
+        }
     }
 }
 
