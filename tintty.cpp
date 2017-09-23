@@ -23,7 +23,7 @@
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define CHAR_WIDTH 6
+#define CHAR_WIDTH 2
 #define CHAR_HEIGHT 8
 
 const int16_t screen_col_count = SCREEN_WIDTH / CHAR_WIDTH;
@@ -141,7 +141,7 @@ void _render(TFT_ILI9163C *tft) {
         tft->startPushData(
             x,
             y,
-            x + 5,
+            x + 1,
             y + 7
         );
 
@@ -149,21 +149,34 @@ void _render(TFT_ILI9163C *tft) {
         // even though this forces a Flash access per each pixel, it is still faster than stock
         const int char_base = state.out_char * 5;
 
+        const unsigned char font_vline0 = pgm_read_byte(&font[char_base + 0]);
+        const unsigned char font_vline1 = pgm_read_byte(&font[char_base + 1]);
+        const unsigned char font_vline2 = pgm_read_byte(&font[char_base + 2]);
+        const unsigned char font_vline3 = pgm_read_byte(&font[char_base + 3]);
+        const unsigned char font_vline4 = pgm_read_byte(&font[char_base + 4]);
+        const unsigned char font_vline5 = 0;
+
         for (int char_font_row = 0; char_font_row < 8; char_font_row++) {
             const unsigned char font_vline_mask = 1 << char_font_row;
 
-            for (int char_font_col = 0; char_font_col < 5; char_font_col++) {
-                const unsigned char font_vline = pgm_read_byte(&font[char_base + char_font_col]);
-
-                tft->pushData(
-                    font_vline & font_vline_mask
-                        ? fg_tft_color
-                        : bg_tft_color
-                );
-            }
+            const unsigned char vline0_val = font_vline0 & font_vline_mask;
+            const unsigned char vline1_val = font_vline1 & font_vline_mask;
+            const unsigned char vline2_val = font_vline2 & font_vline_mask;
+            const unsigned char vline3_val = font_vline3 & font_vline_mask;
+            const unsigned char vline4_val = font_vline4 & font_vline_mask;
+            const unsigned char vline5_val = font_vline5 & font_vline_mask;
 
             // char spacing
-            tft->pushData(0);
+            tft->pushData(
+                (vline2_val ? 0xF800 : 0) |
+                (vline1_val ? 0x07E0 : 0) |
+                (vline0_val ? 0x001F : 0)
+            );
+            tft->pushData(
+                (vline5_val ? 0xF800 : 0) |
+                (vline4_val ? 0x07E0 : 0) |
+                (vline3_val ? 0x001F : 0)
+            );
         }
 
         tft->endPushData();
