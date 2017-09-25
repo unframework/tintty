@@ -135,6 +135,10 @@ void setup() {
       return (char)Serial.peek();
     },
     [=](){
+      // process at least one idle loop to allow input to happen
+      tintty_idle(&tft);
+      Usb.Task(); // @todo move?
+
       // first read from the test buffer
       if (test_buffer_cursor < test_buffer_length) {
         tintty_idle(&tft);
@@ -150,7 +154,6 @@ void setup() {
       // fall back to normal blocking serial input
       while (Serial.available() < 1) {
         tintty_idle(&tft);
-
         Usb.Task(); // @todo move?
       }
 
