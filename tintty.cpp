@@ -455,17 +455,21 @@ void _exec_escape_bracket_command_with_args(
             state.out_char_col = state.cursor_col;
             state.out_char_row = state.cursor_row;
 
-            state.out_clear_before = ARG(0, 0) != 0
-                ? state.cursor_row * screen_col_count + state.cursor_col
-                : 0;
-            state.out_clear_after = ARG(0, 0) != 1
-                ? (screen_row_count - 1 - state.cursor_row) * screen_col_count + (screen_col_count - 1 - state.cursor_col)
-                : 0;
+            {
+                const int16_t rel_row = state.cursor_row - state.top_row;
+
+                state.out_clear_before = ARG(0, 0) != 0
+                    ? rel_row * screen_col_count + state.cursor_col
+                    : 0;
+                state.out_clear_after = ARG(0, 0) != 1
+                    ? (screen_row_count - 1 - rel_row) * screen_col_count + (screen_col_count - 1 - state.cursor_col)
+                    : 0;
+            }
 
             break;
 
         case 'K':
-            // clear screen
+            // clear line
             state.out_char = ' ';
             state.out_char_col = state.cursor_col;
             state.out_char_row = state.cursor_row;
