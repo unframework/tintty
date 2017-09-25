@@ -23,7 +23,7 @@
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define CHAR_WIDTH 2
+#define CHAR_WIDTH 4
 #define CHAR_HEIGHT 8
 
 const int16_t screen_col_count = SCREEN_WIDTH / CHAR_WIDTH;
@@ -141,7 +141,7 @@ void _render(TFT_ILI9163C *tft) {
         tft->startPushData(
             x,
             y,
-            x + 1,
+            x + 3,
             y + 7
         );
 
@@ -168,14 +168,24 @@ void _render(TFT_ILI9163C *tft) {
 
             // char spacing
             tft->pushData(
-                (vline2_val ? 0xF800 : 0) |
-                (vline1_val ? 0x07E0 : 0) |
-                (vline0_val ? 0x001F : 0)
+                (vline0_val ? 0x001F : 0) |
+                (vline0_val ? 0x07E0 : 0) |
+                (vline1_val ? 0xF800 : 0)
             );
             tft->pushData(
-                (vline5_val ? 0xF800 : 0) |
-                (vline4_val ? 0x07E0 : 0) |
-                (vline3_val ? 0x001F : 0)
+                (vline1_val ? 0x001F : 0) |
+                (vline2_val ? 0x07E0 : 0) |
+                (vline2_val ? 0xF800 : 0)
+            );
+            tft->pushData(
+                (vline3_val ? 0x001F : 0) |
+                (vline3_val ? 0x07E0 : 0) |
+                (vline4_val ? 0xF800 : 0)
+            );
+            tft->pushData(
+                (vline4_val ? 0x001F : 0) |
+                (vline5_val ? 0x07E0 : 0) |
+                (vline5_val ? 0xF800 : 0)
             );
         }
 
