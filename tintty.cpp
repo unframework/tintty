@@ -446,7 +446,7 @@ void _exec_escape_bracket_command_with_args(
         case 'f':
             // Direct Cursor Addressing (row;col)
             state.cursor_col = max(0, min(screen_col_count - 1, ARG(1, 1) - 1));
-            state.cursor_row = max(0, min(screen_row_count - 1, ARG(0, 1) - 1));
+            state.cursor_row = state.top_row + max(0, min(screen_row_count - 1, ARG(0, 1) - 1));
             break;
 
         case 'J':
