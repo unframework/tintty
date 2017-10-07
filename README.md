@@ -1,5 +1,10 @@
 # TinTTY
 
+## Prerequisites
+
+- Adafruit GFX
+- USB Host Shield Library 2.0
+
 ## Development
 
 Testing on Windows is easy to do from a Vagrant VM running Linux. Arduino usually exposes the USB connection as serial COM3 port, so the VM is configured to forward the COM3 port to `/dev/ttyS0` inside the Linux environment.
