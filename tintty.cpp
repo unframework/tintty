@@ -168,14 +168,14 @@ void _render(TFT_ILI9163C *tft) {
 
             // char spacing
             tft->pushData(
-                (vline2_val ? 0xF800 : 0) |
+                (vline0_val ? 0x001F : 0) |
                 (vline1_val ? 0x07E0 : 0) |
-                (vline0_val ? 0x001F : 0)
+                (vline2_val ? 0xF800 : 0)
             );
             tft->pushData(
-                (vline5_val ? 0xF800 : 0) |
+                (vline3_val ? 0x001F : 0) |
                 (vline4_val ? 0x07E0 : 0) |
-                (vline3_val ? 0x001F : 0)
+                (vline5_val ? 0xF800 : 0)
             );
         }
 
