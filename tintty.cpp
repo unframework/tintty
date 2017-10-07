@@ -159,23 +159,57 @@ void _render(TFT_ILI9163C *tft) {
         for (int char_font_row = 0; char_font_row < 8; char_font_row++) {
             const unsigned char font_vline_mask = 1 << char_font_row;
 
+            const unsigned char vlinep5_val = 0; // @todo get from previous char in buffer
             const unsigned char vline0_val = font_vline0 & font_vline_mask;
             const unsigned char vline1_val = font_vline1 & font_vline_mask;
             const unsigned char vline2_val = font_vline2 & font_vline_mask;
             const unsigned char vline3_val = font_vline3 & font_vline_mask;
             const unsigned char vline4_val = font_vline4 & font_vline_mask;
             const unsigned char vline5_val = font_vline5 & font_vline_mask;
+            const unsigned char vlinen0_val = 0; // @todo get from next char in buffer
+
+            // 1/3 intensity 5-6-5 BGR components
+            const uint16_t b3 = 0x000A;
+            const uint16_t g3 = 0x0280;
+            const uint16_t r3 = 0x5000;
+            // const uint16_t b = 0x001F;
+            // const uint16_t g = 0x07E0;
+            // const uint16_t r = 0x5000;
 
             // char spacing
             tft->pushData(
-                (vline0_val ? 0x001F : 0) |
-                (vline1_val ? 0x07E0 : 0) |
-                (vline2_val ? 0xF800 : 0)
+                (
+                    (vlinep5_val ? b3 : 0) +
+                    (vline0_val ? b3 : 0) +
+                    (vline1_val ? b3 : 0)
+                ) |
+                (
+                    (vline0_val ? g3 : 0) +
+                    (vline1_val ? g3 : 0) +
+                    (vline2_val ? g3 : 0)
+                ) |
+                (
+                    (vline1_val ? r3 : 0) +
+                    (vline2_val ? r3 : 0) +
+                    (vline3_val ? r3 : 0)
+                )
             );
             tft->pushData(
-                (vline3_val ? 0x001F : 0) |
-                (vline4_val ? 0x07E0 : 0) |
-                (vline5_val ? 0xF800 : 0)
+                (
+                    (vline2_val ? b3 : 0) +
+                    (vline3_val ? b3 : 0) +
+                    (vline4_val ? b3 : 0)
+                ) |
+                (
+                    (vline3_val ? g3 : 0) +
+                    (vline4_val ? g3 : 0) +
+                    (vline5_val ? g3 : 0)
+                ) |
+                (
+                    (vline4_val ? r3 : 0) +
+                    (vline5_val ? r3 : 0) +
+                    (vlinen0_val ? r3 : 0)
+                )
             );
         }
 
