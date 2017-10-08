@@ -226,7 +226,7 @@ void _render(TFT_ILI9163C *tft) {
 
             // 1/3 intensity 5-6-5 BGR components
             const uint16_t b3 = 0x000A;
-            const uint16_t g3 = 0x0280;
+            const uint16_t g3 = 0x02A0;
             const uint16_t r3 = 0x5000;
             // const uint16_t b = 0x001F;
             // const uint16_t g = 0x07E0;
