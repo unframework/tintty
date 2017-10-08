@@ -136,7 +136,6 @@ void _render(TFT_ILI9163C *tft) {
 
     // render character if needed
     if (state.out_char != 0) {
-        // @todo clear char buffer when doing line/screen clearing
         rendered.char_buffer[state.out_char_row][state.out_char_col] = state.out_char;
 
         const bool has_prev = state.out_char_col > 0;
@@ -342,6 +341,9 @@ void _render(TFT_ILI9163C *tft) {
 
         // line-before
         if (state.out_clear_before > 0) {
+            // clear char buffer
+            memset(&rendered.char_buffer[state.out_char_row][state.out_char_col] - state.out_clear_before, 0, state.out_clear_before);
+
             const int16_t line_before_chars = min(state.out_char_col, state.out_clear_before);
             const int16_t lines_before = (state.out_clear_before - line_before_chars) / screen_col_count;
 
@@ -366,6 +368,9 @@ void _render(TFT_ILI9163C *tft) {
 
         // line-after
         if (state.out_clear_after > 0) {
+            // clear char buffer
+            memset(&rendered.char_buffer[state.out_char_row][state.out_char_col] + 1, 0, state.out_clear_after);
+
             const int16_t line_after_chars = min(screen_col_count - 1 - state.out_char_col, state.out_clear_after);
             const int16_t lines_after = (state.out_clear_after - line_after_chars) / screen_col_count;
 
