@@ -149,23 +149,29 @@ void _render(TFT_ILI9163C *tft) {
         // even though this forces a Flash access per each pixel, it is still faster than stock
         const int char_base = state.out_char * 5;
 
-        const unsigned char font_vline0 = pgm_read_byte(&font[char_base + 0]);
-        const unsigned char font_vline1 = pgm_read_byte(&font[char_base + 1]);
-        const unsigned char font_vline2 = pgm_read_byte(&font[char_base + 2]);
-        const unsigned char font_vline3 = pgm_read_byte(&font[char_base + 3]);
-        const unsigned char font_vline4 = pgm_read_byte(&font[char_base + 4]);
-        const unsigned char font_vline5 = 0;
+        const uint8_t font_vline[2 * 3] = {
+            pgm_read_byte(&font[char_base + 0]),
+            pgm_read_byte(&font[char_base + 1]),
+            pgm_read_byte(&font[char_base + 2]),
+            pgm_read_byte(&font[char_base + 3]),
+            pgm_read_byte(&font[char_base + 4]),
+            0
+        };
 
         for (int char_font_row = 0; char_font_row < 8; char_font_row++) {
             const unsigned char font_vline_mask = 1 << char_font_row;
 
             const unsigned char vlinep5_val = 0; // @todo get from previous char in buffer
-            const unsigned char vline0_val = font_vline0 & font_vline_mask;
-            const unsigned char vline1_val = font_vline1 & font_vline_mask;
-            const unsigned char vline2_val = font_vline2 & font_vline_mask;
-            const unsigned char vline3_val = font_vline3 & font_vline_mask;
-            const unsigned char vline4_val = font_vline4 & font_vline_mask;
-            const unsigned char vline5_val = font_vline5 & font_vline_mask;
+
+            const bool vline_val[2 * 3] = {
+                font_vline[0] & font_vline_mask,
+                font_vline[1] & font_vline_mask,
+                font_vline[2] & font_vline_mask,
+                font_vline[3] & font_vline_mask,
+                font_vline[4] & font_vline_mask,
+                font_vline[5] & font_vline_mask
+            };
+
             const unsigned char vlinen0_val = 0; // @todo get from next char in buffer
 
             // 1/3 intensity 5-6-5 BGR components
@@ -180,34 +186,34 @@ void _render(TFT_ILI9163C *tft) {
             tft->pushData(
                 (
                     (vlinep5_val ? b3 : 0) +
-                    (vline0_val ? b3 : 0) +
-                    (vline1_val ? b3 : 0)
+                    (vline_val[0] ? b3 : 0) +
+                    (vline_val[1] ? b3 : 0)
                 ) |
                 (
-                    (vline0_val ? g3 : 0) +
-                    (vline1_val ? g3 : 0) +
-                    (vline2_val ? g3 : 0)
+                    (vline_val[0] ? g3 : 0) +
+                    (vline_val[1] ? g3 : 0) +
+                    (vline_val[2] ? g3 : 0)
                 ) |
                 (
-                    (vline1_val ? r3 : 0) +
-                    (vline2_val ? r3 : 0) +
-                    (vline3_val ? r3 : 0)
+                    (vline_val[1] ? r3 : 0) +
+                    (vline_val[2] ? r3 : 0) +
+                    (vline_val[3] ? r3 : 0)
                 )
             );
             tft->pushData(
                 (
-                    (vline2_val ? b3 : 0) +
-                    (vline3_val ? b3 : 0) +
-                    (vline4_val ? b3 : 0)
+                    (vline_val[2] ? b3 : 0) +
+                    (vline_val[3] ? b3 : 0) +
+                    (vline_val[4] ? b3 : 0)
                 ) |
                 (
-                    (vline3_val ? g3 : 0) +
-                    (vline4_val ? g3 : 0) +
-                    (vline5_val ? g3 : 0)
+                    (vline_val[3] ? g3 : 0) +
+                    (vline_val[4] ? g3 : 0) +
+                    (vline_val[5] ? g3 : 0)
                 ) |
                 (
-                    (vline4_val ? r3 : 0) +
-                    (vline5_val ? r3 : 0) +
+                    (vline_val[4] ? r3 : 0) +
+                    (vline_val[5] ? r3 : 0) +
                     (vlinen0_val ? r3 : 0)
                 )
             );
