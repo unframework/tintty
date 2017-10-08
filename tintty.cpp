@@ -84,6 +84,9 @@ struct tintty_state {
 struct tintty_rendered {
     int16_t cursor_col, cursor_row;
     int16_t top_row;
+
+    // @todo this is causing stability issues due to memory usage
+    char char_buffer[SCREEN_HEIGHT / CHAR_HEIGHT][SCREEN_WIDTH / CHAR_WIDTH];
 } rendered;
 
 // @todo support negative cursor_row
@@ -133,7 +136,14 @@ void _render(TFT_ILI9163C *tft) {
 
     // render character if needed
     if (state.out_char != 0) {
-        const uint8_t x = state.out_char_col * CHAR_WIDTH;
+        // @todo clear char buffer when doing line/screen clearing
+        rendered.char_buffer[state.out_char_row][state.out_char_col] = state.out_char;
+
+        const bool has_prev = state.out_char_col > 0;
+        const bool has_next = state.out_char_col < screen_col_count - 1;
+
+        const uint8_t x = state.out_char_col * CHAR_WIDTH - (has_prev ? 1 : 0);
+        const uint8_t x2 = state.out_char_col * CHAR_WIDTH + CHAR_WIDTH + (has_next ? 1 : 0) - 1;
         const uint8_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT;
         const uint16_t fg_tft_color = state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color];
         const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
@@ -141,14 +151,30 @@ void _render(TFT_ILI9163C *tft) {
         tft->startPushData(
             x,
             y,
-            x + 1,
+            x2,
             y + 7
         );
 
         // logic inspired by Adafruit_GFX but optimized for TFT data push
         // even though this forces a Flash access per each pixel, it is still faster than stock
-        const int char_base = state.out_char * 5;
+        const char prev_char = has_prev
+            ? rendered.char_buffer[state.out_char_row][state.out_char_col - 1]
+            : 0;
+        const char next_char = has_next
+            ? rendered.char_buffer[state.out_char_row][state.out_char_col + 1]
+            : 0;
 
+        const int prev_char_base = prev_char * 5;
+        const uint8_t prev_font_vline[2 * 3] = {
+            0,
+            0,
+            pgm_read_byte(&font[prev_char_base + 2]),
+            pgm_read_byte(&font[prev_char_base + 3]),
+            pgm_read_byte(&font[prev_char_base + 4]),
+            0
+        };
+
+        const int char_base = state.out_char * 5;
         const uint8_t font_vline[2 * 3] = {
             pgm_read_byte(&font[char_base + 0]),
             pgm_read_byte(&font[char_base + 1]),
@@ -158,10 +184,27 @@ void _render(TFT_ILI9163C *tft) {
             0
         };
 
+        const int next_char_base = next_char * 5;
+        const uint8_t next_font_vline[2 * 3] = {
+            pgm_read_byte(&font[next_char_base + 0]),
+            pgm_read_byte(&font[next_char_base + 1]),
+            pgm_read_byte(&font[next_char_base + 2]),
+            pgm_read_byte(&font[next_char_base + 3]),
+            0,
+            0
+        };
+
         for (int char_font_row = 0; char_font_row < 8; char_font_row++) {
             const unsigned char font_vline_mask = 1 << char_font_row;
 
-            const unsigned char vlinep5_val = 0; // @todo get from previous char in buffer
+            const bool prev_vline_val[2 * 3] = {
+                prev_font_vline[0] & font_vline_mask,
+                prev_font_vline[1] & font_vline_mask,
+                prev_font_vline[2] & font_vline_mask,
+                prev_font_vline[3] & font_vline_mask,
+                prev_font_vline[4] & font_vline_mask,
+                prev_font_vline[5] & font_vline_mask
+            };
 
             const bool vline_val[2 * 3] = {
                 font_vline[0] & font_vline_mask,
@@ -172,7 +215,14 @@ void _render(TFT_ILI9163C *tft) {
                 font_vline[5] & font_vline_mask
             };
 
-            const unsigned char vlinen0_val = 0; // @todo get from next char in buffer
+            const bool next_vline_val[2 * 3] = {
+                next_font_vline[0] & font_vline_mask,
+                next_font_vline[1] & font_vline_mask,
+                next_font_vline[2] & font_vline_mask,
+                next_font_vline[3] & font_vline_mask,
+                next_font_vline[4] & font_vline_mask,
+                next_font_vline[5] & font_vline_mask
+            };
 
             // 1/3 intensity 5-6-5 BGR components
             const uint16_t b3 = 0x000A;
@@ -182,10 +232,31 @@ void _render(TFT_ILI9163C *tft) {
             // const uint16_t g = 0x07E0;
             // const uint16_t r = 0x5000;
 
-            // char spacing
+            // prev char slice
+            if (has_prev) {
+                tft->pushData(
+                    (
+                        (prev_vline_val[2] ? b3 : 0) +
+                        (prev_vline_val[3] ? b3 : 0) +
+                        (prev_vline_val[4] ? b3 : 0)
+                    ) |
+                    (
+                        (prev_vline_val[3] ? g3 : 0) +
+                        (prev_vline_val[4] ? g3 : 0) +
+                        (prev_vline_val[5] ? g3 : 0)
+                    ) |
+                    (
+                        (prev_vline_val[4] ? r3 : 0) +
+                        (prev_vline_val[5] ? r3 : 0) +
+                        (vline_val[0] ? r3 : 0)
+                    )
+                );
+            }
+
+            // main char slice
             tft->pushData(
                 (
-                    (vlinep5_val ? b3 : 0) +
+                    (prev_vline_val[5] ? b3 : 0) +
                     (vline_val[0] ? b3 : 0) +
                     (vline_val[1] ? b3 : 0)
                 ) |
@@ -214,9 +285,30 @@ void _render(TFT_ILI9163C *tft) {
                 (
                     (vline_val[4] ? r3 : 0) +
                     (vline_val[5] ? r3 : 0) +
-                    (vlinen0_val ? r3 : 0)
+                    (next_vline_val[0] ? r3 : 0)
                 )
             );
+
+            // next char slice
+            if (has_next) {
+                tft->pushData(
+                    (
+                        (vline_val[5] ? b3 : 0) +
+                        (next_vline_val[0] ? b3 : 0) +
+                        (next_vline_val[1] ? b3 : 0)
+                    ) |
+                    (
+                        (next_vline_val[0] ? g3 : 0) +
+                        (next_vline_val[1] ? g3 : 0) +
+                        (next_vline_val[2] ? g3 : 0)
+                    ) |
+                    (
+                        (next_vline_val[1] ? r3 : 0) +
+                        (next_vline_val[2] ? r3 : 0) +
+                        (next_vline_val[3] ? r3 : 0)
+                    )
+                );
+            }
         }
 
         tft->endPushData();
