@@ -165,8 +165,8 @@ void _render(TFT_ILI9163C *tft) {
 
         const int prev_char_base = prev_char * 5;
         const uint8_t prev_font_vline[2 * 3] = {
-            0, // never used
-            pgm_read_byte(&font[prev_char_base + 1]),
+            0,
+            0,
             pgm_read_byte(&font[prev_char_base + 2]),
             pgm_read_byte(&font[prev_char_base + 3]),
             pgm_read_byte(&font[prev_char_base + 4]),
@@ -180,7 +180,7 @@ void _render(TFT_ILI9163C *tft) {
             pgm_read_byte(&font[char_base + 2]),
             pgm_read_byte(&font[char_base + 3]),
             pgm_read_byte(&font[char_base + 4]),
-            0 // character spacing
+            0
         };
 
         const int next_char_base = next_char * 5;
@@ -189,8 +189,8 @@ void _render(TFT_ILI9163C *tft) {
             pgm_read_byte(&font[next_char_base + 1]),
             pgm_read_byte(&font[next_char_base + 2]),
             pgm_read_byte(&font[next_char_base + 3]),
-            pgm_read_byte(&font[next_char_base + 4]),
-            0 // never used
+            0,
+            0
         };
 
         for (int char_font_row = 0; char_font_row < 8; char_font_row++) {
@@ -223,13 +223,10 @@ void _render(TFT_ILI9163C *tft) {
                 next_font_vline[5] & font_vline_mask
             };
 
-            // 1/9 intensity 5-6-5 BGR components
-            const uint16_t b9 = 0x0003;
-            const uint16_t g9 = 0x00E0;
-            const uint16_t r9 = 0x1800;
-            // const uint16_t b3 = 0x000A;
-            // const uint16_t g3 = 0x02A0;
-            // const uint16_t r3 = 0x5000;
+            // 1/3 intensity 5-6-5 BGR components
+            const uint16_t b3 = 0x000A;
+            const uint16_t g3 = 0x02A0;
+            const uint16_t r3 = 0x5000;
             // const uint16_t b = 0x001F;
             // const uint16_t g = 0x07E0;
             // const uint16_t r = 0x5000;
@@ -238,25 +235,19 @@ void _render(TFT_ILI9163C *tft) {
             if (has_prev) {
                 tft->pushData(
                     (
-                        (prev_vline_val[1] ? b9 : 0) +
-                        (prev_vline_val[2] ? b9 * 2 : 0) +
-                        (prev_vline_val[3] ? b9 * 3 : 0) +
-                        (prev_vline_val[4] ? b9 * 2 : 0) +
-                        (prev_vline_val[5] ? b9 : 0)
+                        (prev_vline_val[2] ? b3 : 0) +
+                        (prev_vline_val[3] ? b3 : 0) +
+                        (prev_vline_val[4] ? b3 : 0)
                     ) |
                     (
-                        (prev_vline_val[2] ? g9 * 1 : 0) +
-                        (prev_vline_val[3] ? g9 * 2 : 0) +
-                        (prev_vline_val[4] ? g9 * 3 : 0) +
-                        (prev_vline_val[5] ? g9 * 2 : 0) +
-                        (prev_vline_val[6] ? g9 * 1 : 0)
+                        (prev_vline_val[3] ? g3 : 0) +
+                        (prev_vline_val[4] ? g3 : 0) +
+                        (prev_vline_val[5] ? g3 : 0)
                     ) |
                     (
-                        (prev_vline_val[3] ? r9 * 1 : 0) +
-                        (prev_vline_val[4] ? r9 * 2 : 0) +
-                        (prev_vline_val[5] ? r9 * 3 : 0) +
-                        (vline_val[0] ? r9 * 2 : 0) +
-                        (vline_val[1] ? r9 * 1 : 0)
+                        (prev_vline_val[4] ? r3 : 0) +
+                        (prev_vline_val[5] ? r3 : 0) +
+                        (vline_val[0] ? r3 : 0)
                     )
                 );
             }
@@ -264,48 +255,36 @@ void _render(TFT_ILI9163C *tft) {
             // main char slice
             tft->pushData(
                 (
-                    (prev_vline_val[4] ? b9 * 1 : 0) +
-                    (prev_vline_val[5] ? b9 * 2 : 0) +
-                    (vline_val[0] ? b9 * 3 : 0) +
-                    (vline_val[1] ? b9 * 2 : 0) +
-                    (vline_val[2] ? b9 * 1 : 0)
+                    (prev_vline_val[5] ? b3 : 0) +
+                    (vline_val[0] ? b3 : 0) +
+                    (vline_val[1] ? b3 : 0)
                 ) |
                 (
-                    (prev_vline_val[5] ? g9 * 1 : 0) +
-                    (vline_val[0] ? g9 * 2 : 0) +
-                    (vline_val[1] ? g9 * 3 : 0) +
-                    (vline_val[2] ? g9 * 2 : 0) +
-                    (vline_val[3] ? g9 * 1 : 0)
+                    (vline_val[0] ? g3 : 0) +
+                    (vline_val[1] ? g3 : 0) +
+                    (vline_val[2] ? g3 : 0)
                 ) |
                 (
-                    (vline_val[0] ? r9 * 1 : 0) +
-                    (vline_val[1] ? r9 * 2 : 0) +
-                    (vline_val[2] ? r9 * 3 : 0) +
-                    (vline_val[3] ? r9 * 2 : 0) +
-                    (vline_val[4] ? r9 * 1 : 0)
+                    (vline_val[1] ? r3 : 0) +
+                    (vline_val[2] ? r3 : 0) +
+                    (vline_val[3] ? r3 : 0)
                 )
             );
             tft->pushData(
                 (
-                    (vline_val[1] ? b9 * 1 : 0) +
-                    (vline_val[2] ? b9 * 2 : 0) +
-                    (vline_val[3] ? b9 * 3 : 0) +
-                    (vline_val[4] ? b9 * 2 : 0) +
-                    (vline_val[5] ? b9 * 1 : 0)
+                    (vline_val[2] ? b3 : 0) +
+                    (vline_val[3] ? b3 : 0) +
+                    (vline_val[4] ? b3 : 0)
                 ) |
                 (
-                    (vline_val[2] ? g9 * 1 : 0) +
-                    (vline_val[3] ? g9 * 2 : 0) +
-                    (vline_val[4] ? g9 * 3 : 0) +
-                    (vline_val[5] ? g9 * 2 : 0) +
-                    (next_vline_val[0] ? g9 * 1 : 0)
+                    (vline_val[3] ? g3 : 0) +
+                    (vline_val[4] ? g3 : 0) +
+                    (vline_val[5] ? g3 : 0)
                 ) |
                 (
-                    (vline_val[3] ? r9 * 1 : 0) +
-                    (vline_val[4] ? r9 * 2 : 0) +
-                    (vline_val[5] ? r9 * 3 : 0) +
-                    (next_vline_val[0] ? r9 * 2 : 0) +
-                    (next_vline_val[1] ? r9 * 1 : 0)
+                    (vline_val[4] ? r3 : 0) +
+                    (vline_val[5] ? r3 : 0) +
+                    (next_vline_val[0] ? r3 : 0)
                 )
             );
 
@@ -313,25 +292,19 @@ void _render(TFT_ILI9163C *tft) {
             if (has_next) {
                 tft->pushData(
                     (
-                        (vline_val[4] ? b9 * 1 : 0) +
-                        (vline_val[5] ? b9 * 2 : 0) +
-                        (next_vline_val[0] ? b9 * 3 : 0) +
-                        (next_vline_val[1] ? b9 * 2 : 0) +
-                        (next_vline_val[2] ? b9 * 1 : 0)
+                        (vline_val[5] ? b3 : 0) +
+                        (next_vline_val[0] ? b3 : 0) +
+                        (next_vline_val[1] ? b3 : 0)
                     ) |
                     (
-                        (vline_val[5] ? g9 * 1 : 0) +
-                        (next_vline_val[0] ? g9 * 2 : 0) +
-                        (next_vline_val[1] ? g9 * 3 : 0) +
-                        (next_vline_val[2] ? g9 * 2 : 0) +
-                        (next_vline_val[3] ? g9 * 1 : 0)
+                        (next_vline_val[0] ? g3 : 0) +
+                        (next_vline_val[1] ? g3 : 0) +
+                        (next_vline_val[2] ? g3 : 0)
                     ) |
                     (
-                        (next_vline_val[0] ? r9 * 1 : 0) +
-                        (next_vline_val[1] ? r9 * 2 : 0) +
-                        (next_vline_val[2] ? r9 * 3 : 0) +
-                        (next_vline_val[3] ? r9 * 2 : 0) +
-                        (next_vline_val[4] ? r9 * 1 : 0)
+                        (next_vline_val[1] ? r3 : 0) +
+                        (next_vline_val[2] ? r3 : 0) +
+                        (next_vline_val[3] ? r3 : 0)
                     )
                 );
             }
