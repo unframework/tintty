@@ -26,7 +26,8 @@
 #define CHAR_WIDTH 2
 #define CHAR_HEIGHT 8
 
-const int16_t screen_col_count = SCREEN_WIDTH / CHAR_WIDTH;
+const int16_t screen_margin_x = 1; // margin to allow subpixel convolution overflow
+const int16_t screen_col_count = (SCREEN_WIDTH - screen_margin_x * 2) / CHAR_WIDTH;
 const int16_t screen_row_count = SCREEN_HEIGHT / CHAR_HEIGHT;
 
 const uint16_t ANSI_COLORS[] = {
@@ -86,7 +87,7 @@ struct tintty_rendered {
     int16_t top_row;
 
     // @todo this is causing stability issues due to memory usage
-    char char_buffer[SCREEN_HEIGHT / CHAR_HEIGHT][SCREEN_WIDTH / CHAR_WIDTH];
+    char char_buffer[SCREEN_HEIGHT / CHAR_HEIGHT][(SCREEN_WIDTH - screen_margin_x * 2) / CHAR_WIDTH];
 } rendered;
 
 // @todo support negative cursor_row
@@ -141,16 +142,15 @@ void _render(TFT_ILI9163C *tft) {
         const bool has_prev = state.out_char_col > 0;
         const bool has_next = state.out_char_col < screen_col_count - 1;
 
-        const uint8_t x = state.out_char_col * CHAR_WIDTH - (has_prev ? 1 : 0);
-        const uint8_t x2 = state.out_char_col * CHAR_WIDTH + CHAR_WIDTH + (has_next ? 1 : 0) - 1;
+        const uint8_t x = screen_margin_x + state.out_char_col * CHAR_WIDTH;
         const uint8_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT;
         const uint16_t fg_tft_color = state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color];
         const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
 
         tft->startPushData(
-            x,
+            x - 1,
             y,
-            x2,
+            x + CHAR_WIDTH,
             y + 7
         );
 
@@ -232,25 +232,23 @@ void _render(TFT_ILI9163C *tft) {
             // const uint16_t r = 0x5000;
 
             // prev char slice
-            if (has_prev) {
-                tft->pushData(
-                    (
-                        (prev_vline_val[2] ? b3 : 0) +
-                        (prev_vline_val[3] ? b3 : 0) +
-                        (prev_vline_val[4] ? b3 : 0)
-                    ) |
-                    (
-                        (prev_vline_val[3] ? g3 : 0) +
-                        (prev_vline_val[4] ? g3 : 0) +
-                        (prev_vline_val[5] ? g3 : 0)
-                    ) |
-                    (
-                        (prev_vline_val[4] ? r3 : 0) +
-                        (prev_vline_val[5] ? r3 : 0) +
-                        (vline_val[0] ? r3 : 0)
-                    )
-                );
-            }
+            tft->pushData(
+                (
+                    (prev_vline_val[2] ? b3 : 0) +
+                    (prev_vline_val[3] ? b3 : 0) +
+                    (prev_vline_val[4] ? b3 : 0)
+                ) |
+                (
+                    (prev_vline_val[3] ? g3 : 0) +
+                    (prev_vline_val[4] ? g3 : 0) +
+                    (prev_vline_val[5] ? g3 : 0)
+                ) |
+                (
+                    (prev_vline_val[4] ? r3 : 0) +
+                    (prev_vline_val[5] ? r3 : 0) +
+                    (vline_val[0] ? r3 : 0)
+                )
+            );
 
             // main char slice
             tft->pushData(
@@ -289,25 +287,23 @@ void _render(TFT_ILI9163C *tft) {
             );
 
             // next char slice
-            if (has_next) {
-                tft->pushData(
-                    (
-                        (vline_val[5] ? b3 : 0) +
-                        (next_vline_val[0] ? b3 : 0) +
-                        (next_vline_val[1] ? b3 : 0)
-                    ) |
-                    (
-                        (next_vline_val[0] ? g3 : 0) +
-                        (next_vline_val[1] ? g3 : 0) +
-                        (next_vline_val[2] ? g3 : 0)
-                    ) |
-                    (
-                        (next_vline_val[1] ? r3 : 0) +
-                        (next_vline_val[2] ? r3 : 0) +
-                        (next_vline_val[3] ? r3 : 0)
-                    )
-                );
-            }
+            tft->pushData(
+                (
+                    (vline_val[5] ? b3 : 0) +
+                    (next_vline_val[0] ? b3 : 0) +
+                    (next_vline_val[1] ? b3 : 0)
+                ) |
+                (
+                    (next_vline_val[0] ? g3 : 0) +
+                    (next_vline_val[1] ? g3 : 0) +
+                    (next_vline_val[2] ? g3 : 0)
+                ) |
+                (
+                    (next_vline_val[1] ? r3 : 0) +
+                    (next_vline_val[2] ? r3 : 0) +
+                    (next_vline_val[3] ? r3 : 0)
+                )
+            );
         }
 
         tft->endPushData();
@@ -322,7 +318,7 @@ void _render(TFT_ILI9163C *tft) {
 
             // @todo force refresh of the current character (convolution filter margins are affected)
             tft->fillRect(
-                (state.out_char_col - line_before_chars) * CHAR_WIDTH,
+                screen_margin_x + (state.out_char_col - line_before_chars) * CHAR_WIDTH,
                 (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
                 line_before_chars * CHAR_WIDTH,
                 CHAR_HEIGHT,
@@ -350,7 +346,7 @@ void _render(TFT_ILI9163C *tft) {
 
             // @todo force refresh of the current character (convolution filter margins are affected)
             tft->fillRect(
-                (state.out_char_col + 1) * CHAR_WIDTH,
+                screen_margin_x + (state.out_char_col + 1) * CHAR_WIDTH,
                 (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
                 line_after_chars * CHAR_WIDTH,
                 CHAR_HEIGHT,
@@ -397,7 +393,7 @@ void _render(TFT_ILI9163C *tft) {
             rendered.cursor_row != state.cursor_row
         ) {
             tft->fillRect(
-                rendered.cursor_col * CHAR_WIDTH,
+                screen_margin_x + rendered.cursor_col * CHAR_WIDTH,
                 (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
                 CHAR_WIDTH,
                 1,
@@ -414,7 +410,7 @@ void _render(TFT_ILI9163C *tft) {
     if (rendered.cursor_col < 0) {
         if (cursor_bar_shown) {
             tft->fillRect(
-                state.cursor_col * CHAR_WIDTH,
+                screen_margin_x + state.cursor_col * CHAR_WIDTH,
                 (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
                 CHAR_WIDTH,
                 1,
