@@ -81,7 +81,8 @@ void TinTTYKeyboardParser::OnKeyPressed(uint8_t asciiChar) {
 TinTTYKeyboardParser tinTTYKeyboardParser;
 
 // buffer to test various input sequences
-char test_buffer[100];
+// @todo initialize with constant to save memory
+char test_buffer[50];
 uint8_t test_buffer_length = 0;
 uint8_t test_buffer_cursor = 0;
 
