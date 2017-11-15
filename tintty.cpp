@@ -24,8 +24,8 @@
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
-#define CHAR_WIDTH 6
-#define CHAR_HEIGHT 8
+#define CHAR_WIDTH 4
+#define CHAR_HEIGHT 6
 
 const int16_t screen_col_count = SCREEN_WIDTH / CHAR_WIDTH;
 const int16_t screen_row_count = SCREEN_HEIGHT / CHAR_HEIGHT;
@@ -56,9 +56,6 @@ const int16_t IDLE_CYCLE_MAX = 25000;
 const int16_t IDLE_CYCLE_ON = 12500;
 
 const int16_t TAB_SIZE = 4;
-
-// @todo this better
-#include <glcdfont.c>
 
 struct tintty_state {
     // @todo consider storing cursor position as single int offset
@@ -142,22 +139,23 @@ void _render(TFT_ILI9163C *tft) {
         tft->startPushData(
             x,
             y,
-            x + 5,
-            y + 7
+            x + 3,
+            y + 5
         );
 
-        // logic inspired by Adafruit_GFX but optimized for TFT data push
-        // even though this forces a Flash access per each pixel, it is still faster than stock
-        const int char_base = state.out_char * 5;
+        // TFT data push
+        const int char_base = state.out_char * 4;
 
-        for (int char_font_row = 0; char_font_row < 8; char_font_row++) {
-            const unsigned char font_vline_mask = 1 << char_font_row;
+        for (int char_font_row = 0; char_font_row < 6; char_font_row++) {
+            const unsigned char font_hline = pgm_read_byte(&font454[char_base + char_font_row]);
 
-            for (int char_font_col = 0; char_font_col < 5; char_font_col++) {
-                const unsigned char font_vline = pgm_read_byte(&font[char_base + char_font_col]);
+            for (int char_font_col = 0; char_font_col < 4; char_font_col++) {
+                const unsigned char font_hline_mask = 1 << char_font_col;
+                const unsigned char pixel_value = (font_hline & font_hline_mask) >> char_font_col;
 
+                // @todo modulate the intensity (use lookup table)
                 tft->pushData(
-                    font_vline & font_vline_mask
+                    pixel_value
                         ? fg_tft_color
                         : bg_tft_color
                 );
