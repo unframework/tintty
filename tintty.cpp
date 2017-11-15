@@ -20,6 +20,7 @@
 #define TFT_BOLD_WHITE   0xFFFF
 
 #include "tintty.h"
+#include "font454.h"
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128
