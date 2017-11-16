@@ -130,6 +130,7 @@ void _render(TFT_ILI9163C *tft) {
     }
 
     // render character if needed
+    // @todo filter out 128-255
     if (state.out_char != 0) {
         const uint8_t x = state.out_char_col * CHAR_WIDTH;
         const uint8_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT;
@@ -144,14 +145,14 @@ void _render(TFT_ILI9163C *tft) {
         );
 
         // TFT data push
-        const int char_base = state.out_char * 4;
+        const int char_base = state.out_char * 6;
 
         for (int char_font_row = 0; char_font_row < 6; char_font_row++) {
             const unsigned char font_hline = pgm_read_byte(&font454[char_base + char_font_row]);
 
-            for (int char_font_col = 0; char_font_col < 4; char_font_col++) {
-                const unsigned char font_hline_mask = 1 << char_font_col;
-                const unsigned char pixel_value = (font_hline & font_hline_mask) >> char_font_col;
+            for (int char_font_bitoffset = 0; char_font_bitoffset < 8; char_font_bitoffset += 2) {
+                const unsigned char font_hline_mask = 3 << char_font_bitoffset;
+                const unsigned char pixel_value = (font_hline & font_hline_mask) >> char_font_bitoffset;
 
                 // @todo modulate the intensity (use lookup table)
                 tft->pushData(
@@ -160,9 +161,6 @@ void _render(TFT_ILI9163C *tft) {
                         : bg_tft_color
                 );
             }
-
-            // char spacing
-            tft->pushData(0);
         }
 
         tft->endPushData();
