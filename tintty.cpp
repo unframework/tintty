@@ -158,7 +158,7 @@ void _render(TFT_ILI9163C *tft) {
         for (int char_font_row = 0; char_font_row < 6; char_font_row++) {
             const unsigned char font_hline = pgm_read_byte(&font454[char_base + char_font_row]);
 
-            for (int char_font_bitoffset = 0; char_font_bitoffset < 8; char_font_bitoffset += 2) {
+            for (int char_font_bitoffset = 6; char_font_bitoffset >= 0; char_font_bitoffset -= 2) {
                 const unsigned char font_hline_mask = 3 << char_font_bitoffset;
                 const unsigned char fg_value = (font_hline & font_hline_mask) >> char_font_bitoffset;
 
