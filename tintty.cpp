@@ -147,19 +147,29 @@ void _render(TFT_ILI9163C *tft) {
         // TFT data push
         const int char_base = state.out_char * 6;
 
+        const uint16_t fg_b = (fg_tft_color & 0x001F) / 3; // @todo precompute division?
+        const uint16_t fg_g = ((fg_tft_color & 0x07E0) >> 5) / 3;
+        const uint16_t fg_r = ((fg_tft_color & 0xF800) >> 11) / 3;
+
+        const uint16_t bg_b = (bg_tft_color & 0x001F) / 3;
+        const uint16_t bg_g = ((bg_tft_color & 0x07E0) >> 5) / 3;
+        const uint16_t bg_r = ((bg_tft_color & 0xF800) >> 11) / 3;
+
         for (int char_font_row = 0; char_font_row < 6; char_font_row++) {
             const unsigned char font_hline = pgm_read_byte(&font454[char_base + char_font_row]);
 
             for (int char_font_bitoffset = 0; char_font_bitoffset < 8; char_font_bitoffset += 2) {
                 const unsigned char font_hline_mask = 3 << char_font_bitoffset;
-                const unsigned char pixel_value = (font_hline & font_hline_mask) >> char_font_bitoffset;
+                const unsigned char fg_value = (font_hline & font_hline_mask) >> char_font_bitoffset;
 
-                // @todo modulate the intensity (use lookup table)
-                tft->pushData(
-                    pixel_value
-                        ? fg_tft_color
-                        : bg_tft_color
-                );
+                // lerp colour components
+                const unsigned char bg_value = 3 - fg_value;
+
+                const uint16_t b = (fg_b * fg_value + bg_b * bg_value);
+                const uint16_t g = (fg_g * fg_value + bg_g * bg_value) << 5;
+                const uint16_t r = (fg_r * fg_value + bg_r * bg_value) << 11;
+
+                tft->pushData(r | g | b);
             }
         }
 
