@@ -89,14 +89,14 @@ void _render(TFT_ILI9163C *tft) {
     // if scrolling, prepare the "recycled" screen area
     if (state.top_row != rendered.top_row) {
         // clear the new piece of screen to be recycled as blank space
-        int16_t row_delta = state.top_row - rendered.top_row;
-
         // @todo handle scroll-up
-        if (row_delta > 0) {
+        if (state.top_row > rendered.top_row) {
             // pre-clear the lines at the bottom
             // @todo always use black instead of current background colour?
-            int16_t clear_height = min(SCREEN_HEIGHT, row_delta * CHAR_HEIGHT);
-            int16_t clear_sbuf_bottom = (state.top_row * CHAR_HEIGHT + SCREEN_HEIGHT) % SCREEN_HEIGHT;
+            int16_t old_bottom_y = rendered.top_row * CHAR_HEIGHT + screen_row_count * CHAR_HEIGHT; // bottom of text may not align with screen height
+            int16_t new_bottom_y = state.top_row * CHAR_HEIGHT + SCREEN_HEIGHT; // extend to bottom edge of new displayed area
+            int16_t clear_sbuf_bottom = new_bottom_y % SCREEN_HEIGHT;
+            int16_t clear_height = min(SCREEN_HEIGHT, new_bottom_y - old_bottom_y);
             int16_t clear_sbuf_top = clear_sbuf_bottom - clear_height;
 
             // if rectangle straddles the screen buffer top edge, render that slice at bottom edge
@@ -137,11 +137,14 @@ void _render(TFT_ILI9163C *tft) {
         const uint16_t fg_tft_color = state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color];
         const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
 
+        const uint8_t y2 = y + 5;
+
+        // declare TFT data push up to bottom edge of buffer
         tft->startPushData(
             x,
             y,
             x + 3,
-            y + 5
+            min(SCREEN_HEIGHT - 1, y2)
         );
 
         // TFT data push
@@ -157,6 +160,16 @@ void _render(TFT_ILI9163C *tft) {
 
         for (int char_font_row = 0; char_font_row < 6; char_font_row++) {
             const unsigned char font_hline = pgm_read_byte(&font454[char_base + char_font_row]);
+
+            // re-declare TFT data push if we wrapped around bottom edge of buffer
+            if (y + char_font_row == SCREEN_HEIGHT) {
+                tft->startPushData(
+                    x,
+                    0,
+                    x + 3,
+                    y2
+                );
+            }
 
             for (int char_font_bitoffset = 6; char_font_bitoffset >= 0; char_font_bitoffset -= 2) {
                 const unsigned char font_hline_mask = 3 << char_font_bitoffset;
@@ -176,6 +189,7 @@ void _render(TFT_ILI9163C *tft) {
         tft->endPushData();
 
         // line-before
+        // @todo detect when straddling edge of buffer
         if (state.out_clear_before > 0) {
             const int16_t line_before_chars = min(state.out_char_col, state.out_clear_before);
             const int16_t lines_before = (state.out_clear_before - line_before_chars) / screen_col_count;
@@ -200,6 +214,7 @@ void _render(TFT_ILI9163C *tft) {
         }
 
         // line-after
+        // @todo detect when straddling edge of buffer
         if (state.out_clear_after > 0) {
             const int16_t line_after_chars = min(screen_col_count - 1 - state.out_char_col, state.out_clear_after);
             const int16_t lines_after = (state.out_clear_after - line_after_chars) / screen_col_count;
@@ -245,6 +260,7 @@ void _render(TFT_ILI9163C *tft) {
     );
 
     // clear existing rendered cursor bar if needed
+    // @todo detect if it is already cleared during scroll
     if (rendered.cursor_col >= 0) {
         if (
             !cursor_bar_shown ||
