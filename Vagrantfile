@@ -8,6 +8,6 @@ Vagrant.configure("2") do |config|
   # per https://gist.github.com/garyachy/c1ee689c73bde019a44078edc5b8ed02
   config.vm.provider :virtualbox do |vb|
     vb.customize ["modifyvm", :id, "--uart1", "0x3f8", "4"]
-    vb.customize ["modifyvm", :id, "--uartmode1", "COM3:"]
+    vb.customize ["modifyvm", :id, "--uartmode1", "COM5:"]
   end
 end
