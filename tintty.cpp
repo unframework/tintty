@@ -154,7 +154,7 @@ void _render(TFT_ILI9163C *tft) {
         const uint8_t char_set = state.g4bank_char_set[state.out_char_g4bank & 0x03]; // ensure 0-3 value
         const int char_base = (
             (char_set & 0x01) * 128 + // ensure 0-1 value
-            state.out_char & 0x7f // ensure max 7-bit character value
+            (state.out_char & 0x7f) // ensure max 7-bit character value
         ) * 6;
 
         const uint16_t fg_b = (fg_tft_color & 0x001F) / 3; // @todo precompute division?
@@ -759,6 +759,18 @@ void _main(
             case '\e':
                 // Escape-command
                 _exec_escape_code(peek_char, read_char, send_char);
+                break;
+
+            case '\x0f':
+                // Shift-In (use G0)
+                // see also the fun reason why these are called this way:
+                // https://en.wikipedia.org/wiki/Shift_Out_and_Shift_In_characters
+                state.out_char_g4bank = 0;
+                break;
+
+            case '\x0e':
+                // Shift-Out (use G1)
+                state.out_char_g4bank = 1;
                 break;
 
             default:
