@@ -8,8 +8,6 @@
 
 // generated from https://bitbucket.org/thesheep/font454
 
-#include "font454.h"
-
 // 4-pixel-wide matrix of 0-3 intensity, packed AABBCCDD
 static const unsigned char font454[] PROGMEM = {
     // default ASCII character set
