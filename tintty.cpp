@@ -65,6 +65,7 @@ struct tintty_state {
 
     // saved DEC cursor info (in screen coords)
     int16_t dec_saved_col, dec_saved_row, dec_saved_bg, dec_saved_fg;
+    uint8_t dec_saved_g4bank;
     bool dec_saved_bold, dec_saved_no_wrap;
 
     // @todo deal with integer overflow
@@ -74,7 +75,10 @@ struct tintty_state {
 
     char out_char;
     int16_t out_char_col, out_char_row;
+    uint8_t out_char_g4bank; // current set shift state, G0 to G3
     int16_t out_clear_before, out_clear_after;
+
+    uint8_t g4bank_char_set[4];
 
     int16_t idle_cycle_count; // @todo track during blocking reads mid-command
 } state;
@@ -130,7 +134,6 @@ void _render(TFT_ILI9163C *tft) {
     }
 
     // render character if needed
-    // @todo filter out 128-255
     if (state.out_char != 0) {
         const uint8_t x = state.out_char_col * CHAR_WIDTH;
         const uint8_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT;
@@ -148,7 +151,11 @@ void _render(TFT_ILI9163C *tft) {
         );
 
         // TFT data push
-        const int char_base = state.out_char * 6;
+        const uint8_t char_set = state.g4bank_char_set[state.out_char_g4bank & 0x03]; // ensure 0-3 value
+        const int char_base = (
+            (char_set & 0x01) * 128 + // ensure 0-1 value
+            state.out_char & 0x7f // ensure max 7-bit character value
+        ) * 6;
 
         const uint16_t fg_b = (fg_tft_color & 0x001F) / 3; // @todo precompute division?
         const uint16_t fg_g = ((fg_tft_color & 0x07E0) >> 5) / 3;
@@ -561,6 +568,30 @@ void _exec_escape_bracket_command(
     );
 }
 
+// set the characters displayed for given G0-G3 bank
+void _exec_character_set(
+    uint8_t g4bank_index,
+    char (*read_char)()
+) {
+    switch (read_char()) {
+        case 'A':
+        case 'B':
+            // normal character set (UK/US)
+            state.g4bank_char_set[g4bank_index] = 0;
+            break;
+
+        case '0':
+            // line-drawing
+            state.g4bank_char_set[g4bank_index] = 1;
+            break;
+
+        default:
+            // alternate sets are unsupported
+            state.g4bank_char_set[g4bank_index] = 0;
+            break;
+    }
+}
+
 // @todo terminal reset
 // @todo parse modes with arguments even if they are no-op
 void _exec_escape_code(
@@ -609,6 +640,7 @@ void _exec_escape_code(
             state.dec_saved_row = state.cursor_row - state.top_row; // relative to top
             state.dec_saved_bg = state.bg_ansi_color;
             state.dec_saved_fg = state.fg_ansi_color;
+            state.dec_saved_g4bank = state.out_char_g4bank;
             state.dec_saved_bold = state.bold;
             state.dec_saved_no_wrap = state.no_wrap;
             break;
@@ -619,8 +651,34 @@ void _exec_escape_code(
             state.cursor_row = state.dec_saved_row + state.top_row; // relative to top
             state.bg_ansi_color = state.dec_saved_bg;
             state.fg_ansi_color = state.dec_saved_fg;
+            state.out_char_g4bank = state.dec_saved_g4bank;
             state.bold = state.dec_saved_bold;
             state.no_wrap = state.dec_saved_no_wrap;
+            break;
+
+        case '=':
+        case '>':
+            // keypad mode setting - ignoring
+            break;
+
+        case '(':
+            // set G0
+            _exec_character_set(0, read_char);
+            break;
+
+        case ')':
+            // set G1
+            _exec_character_set(1, read_char);
+            break;
+
+        case '*':
+            // set G2
+            _exec_character_set(2, read_char);
+            break;
+
+        case '+':
+            // set G3
+            _exec_character_set(3, read_char);
             break;
 
         default:
@@ -732,10 +790,16 @@ void tintty_run(
     state.dec_saved_row = 0;
     state.dec_saved_bg = state.bg_ansi_color;
     state.dec_saved_fg = state.fg_ansi_color;
+    state.dec_saved_g4bank = 0;
     state.dec_saved_bold = state.bold;
     state.dec_saved_no_wrap = false;
 
     state.out_char = 0;
+    state.out_char_g4bank = 0;
+    state.g4bank_char_set[0] = 0;
+    state.g4bank_char_set[1] = 0;
+    state.g4bank_char_set[2] = 0;
+    state.g4bank_char_set[3] = 0;
 
     rendered.cursor_col = -1;
     rendered.cursor_row = -1;
