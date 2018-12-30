@@ -12,7 +12,6 @@
 #include <TFT_ILI9163C.h>
 
 #include "tintty.h"
-#include "tintty_usbkeyboard.h"
 
 // this is following a tutorial-recommended pinout, but changing
 // the SPI CS and RS pins for the TFT to be 5 and 4 to avoid
@@ -25,8 +24,6 @@ uint8_t test_buffer_cursor = 0;
 
 void setup() {
   Serial.begin(9600); // normal baud-rate
-
-  tintty_usbkeyboard_init();
 
   tft.begin();
 
@@ -50,14 +47,12 @@ void setup() {
     [=](){
       // process at least one idle loop to allow input to happen
       tintty_idle(&tft);
-      tintty_usbkeyboard_update(); // @todo move?
 
       // first read from the test buffer
       char test_char = test_buffer[test_buffer_cursor];
 
       if (test_char) {
         tintty_idle(&tft);
-        tintty_usbkeyboard_update(); // @todo move?
 
         test_buffer_cursor += 1;
         return test_char;
@@ -66,7 +61,6 @@ void setup() {
       // fall back to normal blocking serial input
       while (Serial.available() < 1) {
         tintty_idle(&tft);
-        tintty_usbkeyboard_update(); // @todo move?
       }
 
       return (char)Serial.read();
