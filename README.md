@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Adafruit GFX
-- USB Host Shield Library 2.0
+- MCUFRIEND 2.4inch screen
 
 ## Development
 

@@ -18,6 +18,7 @@
 MCUFRIEND_kbv tft;
 
 // input serial forwarder RX, TX (TX should not be used anyway)
+// @todo separate out to be configuration-specific and replace with touchscreen
 // SoftwareSerial inputSerial(9, 10);
 
 // buffer to test various input sequences
