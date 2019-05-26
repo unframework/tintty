@@ -57,6 +57,7 @@ const int16_t IDLE_CYCLE_ON = 12500;
 
 const int16_t TAB_SIZE = 4;
 
+// cursor and character position is in global buffer coordinate space (may exceed screen height)
 struct tintty_state {
     // @todo consider storing cursor position as single int offset
     int16_t cursor_col, cursor_row;
@@ -97,6 +98,7 @@ void _render(MCUFRIEND_kbv *tft) {
         if (state.top_row > rendered.top_row) {
             // pre-clear the lines at the bottom
             // @todo always use black instead of current background colour?
+            // @todo deal with overflow from multiplication by CHAR_HEIGHT
             int16_t old_bottom_y = rendered.top_row * CHAR_HEIGHT + screen_row_count * CHAR_HEIGHT; // bottom of text may not align with screen height
             int16_t new_bottom_y = state.top_row * CHAR_HEIGHT + SCREEN_HEIGHT; // extend to bottom edge of new displayed area
             int16_t clear_sbuf_bottom = new_bottom_y % SCREEN_HEIGHT;
@@ -127,8 +129,7 @@ void _render(MCUFRIEND_kbv *tft) {
         }
 
         // update displayed scroll
-        // @todo
-        // tft->scroll((state.top_row * CHAR_HEIGHT) % SCREEN_HEIGHT);
+        tft->vertScroll(0, SCREEN_HEIGHT, (state.top_row * CHAR_HEIGHT) % SCREEN_HEIGHT); // @todo deal with overflow from multiplication
 
         // save rendered state
         rendered.top_row = state.top_row;
@@ -136,8 +137,8 @@ void _render(MCUFRIEND_kbv *tft) {
 
     // render character if needed
     if (state.out_char != 0) {
-        const uint8_t x = state.out_char_col * CHAR_WIDTH;
-        const uint8_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT;
+        const uint16_t x = state.out_char_col * CHAR_WIDTH;
+        const uint16_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT; // @todo deal with overflow from multiplication
         const uint16_t fg_tft_color = state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color];
         const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
 
@@ -219,7 +220,7 @@ void _render(MCUFRIEND_kbv *tft) {
 
             tft->fillRect(
                 (state.out_char_col - line_before_chars) * CHAR_WIDTH,
-                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 line_before_chars * CHAR_WIDTH,
                 CHAR_HEIGHT,
                 ANSI_COLORS[state.bg_ansi_color]
@@ -228,7 +229,7 @@ void _render(MCUFRIEND_kbv *tft) {
             for (int16_t i = 0; i < lines_before; i += 1) {
                 tft->fillRect(
                     0,
-                    ((state.out_char_row - 1 - i) * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                    ((state.out_char_row - 1 - i) * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                     SCREEN_WIDTH,
                     CHAR_HEIGHT,
                     ANSI_COLORS[state.bg_ansi_color]
@@ -244,7 +245,7 @@ void _render(MCUFRIEND_kbv *tft) {
 
             tft->fillRect(
                 (state.out_char_col + 1) * CHAR_WIDTH,
-                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 line_after_chars * CHAR_WIDTH,
                 CHAR_HEIGHT,
                 ANSI_COLORS[state.bg_ansi_color]
@@ -253,7 +254,7 @@ void _render(MCUFRIEND_kbv *tft) {
             for (int16_t i = 0; i < lines_after; i += 1) {
                 tft->fillRect(
                     0,
-                    ((state.out_char_row + 1 + i) * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                    ((state.out_char_row + 1 + i) * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                     SCREEN_WIDTH,
                     CHAR_HEIGHT,
                     ANSI_COLORS[state.bg_ansi_color]
@@ -292,7 +293,7 @@ void _render(MCUFRIEND_kbv *tft) {
         ) {
             tft->fillRect(
                 rendered.cursor_col * CHAR_WIDTH,
-                (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
+                (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 CHAR_WIDTH,
                 1,
                 ANSI_COLORS[state.bg_ansi_color] // @todo save the original background colour or even pixel values
@@ -309,7 +310,7 @@ void _render(MCUFRIEND_kbv *tft) {
         if (cursor_bar_shown) {
             tft->fillRect(
                 state.cursor_col * CHAR_WIDTH,
-                (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
+                (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 CHAR_WIDTH,
                 1,
                 state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color]
@@ -832,11 +833,8 @@ void tintty_run(
     rendered.cursor_col = -1;
     rendered.cursor_row = -1;
 
-    // set up fullscreen TFT scroll
-    // magic value for second parameter (bottom-fixed-area)
-    // compensate for extra length of graphical RAM (GRAM)
-    // @todo
-    // tft->defineScrollArea(0, 32);
+    // reset TFT scroll to default
+    tft->vertScroll(0, SCREEN_HEIGHT, 0);
 
     // initial render
     _render(tft);
