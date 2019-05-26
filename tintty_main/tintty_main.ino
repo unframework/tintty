@@ -21,7 +21,7 @@
 TFT_ILI9163C tft = TFT_ILI9163C(5, 8, 4);
 
 // input serial forwarder RX, TX (TX should not be used anyway)
-SoftwareSerial inputSerial(9, 10);
+// SoftwareSerial inputSerial(9, 10);
 
 // buffer to test various input sequences
 char *test_buffer = "-- \e[1mTinTTY\e[m --\r\n";
@@ -29,7 +29,7 @@ uint8_t test_buffer_cursor = 0;
 
 void setup() {
   Serial.begin(9600); // normal baud-rate
-  inputSerial.begin(9600); // normal baud-rate
+  // inputSerial.begin(9600); // normal baud-rate
 
   tft.begin();
 
@@ -83,7 +83,7 @@ void loop() {
 }
 
 void input_idle() {
-  if (inputSerial.available()) {
-    Serial.write(inputSerial.read());
-  }
+  // if (inputSerial.available()) {
+  //   Serial.write(inputSerial.read());
+  // }
 }
