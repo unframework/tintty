@@ -45,58 +45,69 @@ bool touchActive = false; // touch status latch state
 #define KEY_ROW_B_Y (KEY_ROW_A_Y + KEY_GUTTER + KEY_HEIGHT)
 #define KEY_ROW_C_Y (KEY_ROW_B_Y + KEY_GUTTER + KEY_HEIGHT)
 #define KEY_ROW_D_Y (KEY_ROW_C_Y + KEY_GUTTER + KEY_HEIGHT)
-#define KEY_WIDTH 18
+#define KEY_WIDTH 16
 #define KEY_HEIGHT 16
 #define KEY_GUTTER 1
 
-#define KEY_ROW_A(index) (14 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_A_Y
-#define KEY_ROW_B(index) (22 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_B_Y
-#define KEY_ROW_C(index) (30 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_C_Y
-#define KEY_ROW_D(index) (38 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_D_Y
+#define KEY_ROW_A_X(index) (9 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_B_X(index) (17 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_C_X(index) (30 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_D_X(index) (38 + (KEY_WIDTH + KEY_GUTTER) * index)
 
 struct touchKey {
   int16_t cx, cy;
   char code;
 } keyLayout[] = {
-  { KEY_ROW_A(0), '0' },
-  { KEY_ROW_A(1), '1' },
-  { KEY_ROW_A(2), '2' },
-  { KEY_ROW_A(3), '3' },
-  { KEY_ROW_A(4), '4' },
-  { KEY_ROW_A(5), '5' },
-  { KEY_ROW_A(6), '6' },
-  { KEY_ROW_A(7), '7' },
-  { KEY_ROW_A(8), '8' },
-  { KEY_ROW_A(9), '9' },
+  { KEY_ROW_A_X(0), KEY_ROW_A_Y, '`' },
+  { KEY_ROW_A_X(1), KEY_ROW_A_Y, '1' },
+  { KEY_ROW_A_X(2), KEY_ROW_A_Y, '2' },
+  { KEY_ROW_A_X(3), KEY_ROW_A_Y, '3' },
+  { KEY_ROW_A_X(4), KEY_ROW_A_Y, '4' },
+  { KEY_ROW_A_X(5), KEY_ROW_A_Y, '5' },
+  { KEY_ROW_A_X(6), KEY_ROW_A_Y, '6' },
+  { KEY_ROW_A_X(7), KEY_ROW_A_Y, '7' },
+  { KEY_ROW_A_X(8), KEY_ROW_A_Y, '8' },
+  { KEY_ROW_A_X(9), KEY_ROW_A_Y, '9' },
+  { KEY_ROW_A_X(10), KEY_ROW_A_Y, '0' },
+  { KEY_ROW_A_X(11), KEY_ROW_A_Y, '-' },
+  { KEY_ROW_A_X(12), KEY_ROW_A_Y, '=' },
 
-  { KEY_ROW_B(0), 'Q' },
-  { KEY_ROW_B(1), 'W' },
-  { KEY_ROW_B(2), 'E' },
-  { KEY_ROW_B(3), 'R' },
-  { KEY_ROW_B(4), 'T' },
-  { KEY_ROW_B(5), 'Y' },
-  { KEY_ROW_B(6), 'U' },
-  { KEY_ROW_B(7), 'I' },
-  { KEY_ROW_B(8), 'O' },
-  { KEY_ROW_B(9), 'P' },
+  { KEY_ROW_B_X(0), KEY_ROW_B_Y, 'Q' },
+  { KEY_ROW_B_X(1), KEY_ROW_B_Y, 'W' },
+  { KEY_ROW_B_X(2), KEY_ROW_B_Y, 'E' },
+  { KEY_ROW_B_X(3), KEY_ROW_B_Y, 'R' },
+  { KEY_ROW_B_X(4), KEY_ROW_B_Y, 'T' },
+  { KEY_ROW_B_X(5), KEY_ROW_B_Y, 'Y' },
+  { KEY_ROW_B_X(6), KEY_ROW_B_Y, 'U' },
+  { KEY_ROW_B_X(7), KEY_ROW_B_Y, 'I' },
+  { KEY_ROW_B_X(8), KEY_ROW_B_Y, 'O' },
+  { KEY_ROW_B_X(9), KEY_ROW_B_Y, 'P' },
+  { KEY_ROW_B_X(10), KEY_ROW_B_Y, '[' },
+  { KEY_ROW_B_X(11), KEY_ROW_B_Y, ']' },
 
-  { KEY_ROW_C(0), 'A' },
-  { KEY_ROW_C(1), 'S' },
-  { KEY_ROW_C(2), 'D' },
-  { KEY_ROW_C(3), 'F' },
-  { KEY_ROW_C(4), 'G' },
-  { KEY_ROW_C(5), 'H' },
-  { KEY_ROW_C(6), 'J' },
-  { KEY_ROW_C(7), 'K' },
-  { KEY_ROW_C(8), 'L' },
+  { KEY_ROW_C_X(0), KEY_ROW_C_Y, 'A' },
+  { KEY_ROW_C_X(1), KEY_ROW_C_Y, 'S' },
+  { KEY_ROW_C_X(2), KEY_ROW_C_Y, 'D' },
+  { KEY_ROW_C_X(3), KEY_ROW_C_Y, 'F' },
+  { KEY_ROW_C_X(4), KEY_ROW_C_Y, 'G' },
+  { KEY_ROW_C_X(5), KEY_ROW_C_Y, 'H' },
+  { KEY_ROW_C_X(6), KEY_ROW_C_Y, 'J' },
+  { KEY_ROW_C_X(7), KEY_ROW_C_Y, 'K' },
+  { KEY_ROW_C_X(8), KEY_ROW_C_Y, 'L' },
+  { KEY_ROW_C_X(9), KEY_ROW_C_Y, ';' },
+  { KEY_ROW_C_X(10), KEY_ROW_C_Y, '\'' },
+  { KEY_ROW_C_X(11), KEY_ROW_C_Y, '\\' },
 
-  { KEY_ROW_D(0), 'Z' },
-  { KEY_ROW_D(1), 'X' },
-  { KEY_ROW_D(2), 'C' },
-  { KEY_ROW_D(3), 'V' },
-  { KEY_ROW_D(4), 'B' },
-  { KEY_ROW_D(5), 'N' },
-  { KEY_ROW_D(6), 'M' }
+  { KEY_ROW_D_X(0), KEY_ROW_D_Y, 'Z' },
+  { KEY_ROW_D_X(1), KEY_ROW_D_Y, 'X' },
+  { KEY_ROW_D_X(2), KEY_ROW_D_Y, 'C' },
+  { KEY_ROW_D_X(3), KEY_ROW_D_Y, 'V' },
+  { KEY_ROW_D_X(4), KEY_ROW_D_Y, 'B' },
+  { KEY_ROW_D_X(5), KEY_ROW_D_Y, 'N' },
+  { KEY_ROW_D_X(6), KEY_ROW_D_Y, 'M' },
+  { KEY_ROW_D_X(7), KEY_ROW_D_Y, ',' },
+  { KEY_ROW_D_X(8), KEY_ROW_D_Y, '.' },
+  { KEY_ROW_D_X(9), KEY_ROW_D_Y, '/' }
 };
 
 const int keyCount = sizeof(keyLayout) / sizeof(keyLayout[0]);
