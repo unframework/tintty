@@ -1,11 +1,15 @@
 
 #include "Arduino.h"
 
+#define TINTTY_CHAR_WIDTH 4
+#define TINTTY_CHAR_HEIGHT 6
+
 /**
  * Renderer callbacks.
  */
 struct tintty_display {
     int16_t screen_width, screen_height;
+    int16_t screen_col_count, screen_row_count; // width and height divided by char size
 
     void (*fill_rect)(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
     void (*draw_pixels)(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t *pixels);

@@ -19,13 +19,8 @@
 #include "tintty.h"
 #include "font454.h"
 
-#define SCREEN_WIDTH 240
-#define SCREEN_HEIGHT 320
-#define CHAR_WIDTH 4
-#define CHAR_HEIGHT 6
-
-const int16_t screen_col_count = SCREEN_WIDTH / CHAR_WIDTH;
-const int16_t screen_row_count = SCREEN_HEIGHT / CHAR_HEIGHT;
+#define CHAR_WIDTH TINTTY_CHAR_WIDTH
+#define CHAR_HEIGHT TINTTY_CHAR_HEIGHT
 
 const uint16_t ANSI_COLORS[] = {
     TFT_BLACK,
@@ -96,18 +91,18 @@ void _render(tintty_display *display) {
             // pre-clear the lines at the bottom
             // @todo always use black instead of current background colour?
             // @todo deal with overflow from multiplication by CHAR_HEIGHT
-            int16_t old_bottom_y = rendered.top_row * CHAR_HEIGHT + screen_row_count * CHAR_HEIGHT; // bottom of text may not align with screen height
-            int16_t new_bottom_y = state.top_row * CHAR_HEIGHT + SCREEN_HEIGHT; // extend to bottom edge of new displayed area
-            int16_t clear_sbuf_bottom = new_bottom_y % SCREEN_HEIGHT;
-            int16_t clear_height = min(SCREEN_HEIGHT, new_bottom_y - old_bottom_y);
+            int16_t old_bottom_y = rendered.top_row * CHAR_HEIGHT + display->screen_row_count * CHAR_HEIGHT; // bottom of text may not align with screen height
+            int16_t new_bottom_y = state.top_row * CHAR_HEIGHT + display->screen_height; // extend to bottom edge of new displayed area
+            int16_t clear_sbuf_bottom = new_bottom_y % display->screen_height;
+            int16_t clear_height = min(display->screen_height, new_bottom_y - old_bottom_y);
             int16_t clear_sbuf_top = clear_sbuf_bottom - clear_height;
 
             // if rectangle straddles the screen buffer top edge, render that slice at bottom edge
             if (clear_sbuf_top < 0) {
                 display->fill_rect(
                     0,
-                    clear_sbuf_top + SCREEN_HEIGHT,
-                    SCREEN_WIDTH,
+                    clear_sbuf_top + display->screen_height,
+                    display->screen_width,
                     -clear_sbuf_top,
                     ANSI_COLORS[state.bg_ansi_color]
                 );
@@ -118,7 +113,7 @@ void _render(tintty_display *display) {
                 display->fill_rect(
                     0,
                     max(0, clear_sbuf_top),
-                    SCREEN_WIDTH,
+                    display->screen_width,
                     clear_sbuf_bottom - max(0, clear_sbuf_top),
                     ANSI_COLORS[state.bg_ansi_color]
                 );
@@ -126,7 +121,7 @@ void _render(tintty_display *display) {
         }
 
         // update displayed scroll
-        display->set_vscroll((state.top_row * CHAR_HEIGHT) % SCREEN_HEIGHT); // @todo deal with overflow from multiplication
+        display->set_vscroll((state.top_row * CHAR_HEIGHT) % display->screen_height); // @todo deal with overflow from multiplication
 
         // save rendered state
         rendered.top_row = state.top_row;
@@ -135,7 +130,7 @@ void _render(tintty_display *display) {
     // render character if needed
     if (state.out_char != 0) {
         const uint16_t x = state.out_char_col * CHAR_WIDTH;
-        const uint16_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT; // @todo deal with overflow from multiplication
+        const uint16_t y = (state.out_char_row * CHAR_HEIGHT) % display->screen_height; // @todo deal with overflow from multiplication
         const uint16_t fg_tft_color = state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color];
         const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
 
@@ -177,7 +172,7 @@ void _render(tintty_display *display) {
         }
 
         // perform TFT data push up to bottom edge of buffer
-        const int preWrapHeight = min(SCREEN_HEIGHT - y, 6);
+        const int preWrapHeight = min(display->screen_height - y, 6);
         const int postWrapHeight = 6 - preWrapHeight;
 
         display->draw_pixels(
@@ -203,11 +198,11 @@ void _render(tintty_display *display) {
         // @todo detect when straddling edge of buffer
         if (state.out_clear_before > 0) {
             const int16_t line_before_chars = min(state.out_char_col, state.out_clear_before);
-            const int16_t lines_before = (state.out_clear_before - line_before_chars) / screen_col_count;
+            const int16_t lines_before = (state.out_clear_before - line_before_chars) / display->screen_col_count;
 
             display->fill_rect(
                 (state.out_char_col - line_before_chars) * CHAR_WIDTH,
-                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
+                (state.out_char_row * CHAR_HEIGHT) % display->screen_height, // @todo deal with overflow from multiplication
                 line_before_chars * CHAR_WIDTH,
                 CHAR_HEIGHT,
                 ANSI_COLORS[state.bg_ansi_color]
@@ -216,8 +211,8 @@ void _render(tintty_display *display) {
             for (int16_t i = 0; i < lines_before; i += 1) {
                 display->fill_rect(
                     0,
-                    ((state.out_char_row - 1 - i) * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
-                    SCREEN_WIDTH,
+                    ((state.out_char_row - 1 - i) * CHAR_HEIGHT) % display->screen_height, // @todo deal with overflow from multiplication
+                    display->screen_width,
                     CHAR_HEIGHT,
                     ANSI_COLORS[state.bg_ansi_color]
                 );
@@ -227,12 +222,12 @@ void _render(tintty_display *display) {
         // line-after
         // @todo detect when straddling edge of buffer
         if (state.out_clear_after > 0) {
-            const int16_t line_after_chars = min(screen_col_count - 1 - state.out_char_col, state.out_clear_after);
-            const int16_t lines_after = (state.out_clear_after - line_after_chars) / screen_col_count;
+            const int16_t line_after_chars = min(display->screen_col_count - 1 - state.out_char_col, state.out_clear_after);
+            const int16_t lines_after = (state.out_clear_after - line_after_chars) / display->screen_col_count;
 
             display->fill_rect(
                 (state.out_char_col + 1) * CHAR_WIDTH,
-                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
+                (state.out_char_row * CHAR_HEIGHT) % display->screen_height, // @todo deal with overflow from multiplication
                 line_after_chars * CHAR_WIDTH,
                 CHAR_HEIGHT,
                 ANSI_COLORS[state.bg_ansi_color]
@@ -241,8 +236,8 @@ void _render(tintty_display *display) {
             for (int16_t i = 0; i < lines_after; i += 1) {
                 display->fill_rect(
                     0,
-                    ((state.out_char_row + 1 + i) * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
-                    SCREEN_WIDTH,
+                    ((state.out_char_row + 1 + i) * CHAR_HEIGHT) % display->screen_height, // @todo deal with overflow from multiplication
+                    display->screen_width,
                     CHAR_HEIGHT,
                     ANSI_COLORS[state.bg_ansi_color]
                 );
@@ -280,7 +275,7 @@ void _render(tintty_display *display) {
         ) {
             display->fill_rect(
                 rendered.cursor_col * CHAR_WIDTH,
-                (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
+                (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % display->screen_height, // @todo deal with overflow from multiplication
                 CHAR_WIDTH,
                 1,
                 ANSI_COLORS[state.bg_ansi_color] // @todo save the original background colour or even pixel values
@@ -297,7 +292,7 @@ void _render(tintty_display *display) {
         if (cursor_bar_shown) {
             display->fill_rect(
                 state.cursor_col * CHAR_WIDTH,
-                (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
+                (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % display->screen_height, // @todo deal with overflow from multiplication
                 CHAR_WIDTH,
                 1,
                 state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color]
@@ -310,11 +305,11 @@ void _render(tintty_display *display) {
     }
 }
 
-void _ensure_cursor_vscroll() {
+void _ensure_cursor_vscroll(tintty_display *display) {
     // move displayed window down to cover cursor
     // @todo support scrolling up as well
-    if (state.cursor_row - state.top_row >= screen_row_count) {
-        state.top_row = state.cursor_row - screen_row_count + 1;
+    if (state.cursor_row - state.top_row >= display->screen_row_count) {
+        state.top_row = state.cursor_row - display->screen_row_count + 1;
     }
 }
 
@@ -441,6 +436,7 @@ void _exec_escape_bracket_command_with_args(
     char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char ch),
+    tintty_display *display,
     uint16_t* arg_list,
     uint16_t arg_count
 ) {
@@ -463,12 +459,12 @@ void _exec_escape_bracket_command_with_args(
 
         case 'B':
             // cursor down (no scroll)
-            state.cursor_row = min(state.top_row + screen_row_count - 1, state.cursor_row + ARG(0, 1));
+            state.cursor_row = min(state.top_row + display->screen_row_count - 1, state.cursor_row + ARG(0, 1));
             break;
 
         case 'C':
             // cursor right (no scroll)
-            state.cursor_col = min(screen_col_count - 1, state.cursor_col + ARG(0, 1));
+            state.cursor_col = min(display->screen_col_count - 1, state.cursor_col + ARG(0, 1));
             break;
 
         case 'D':
@@ -479,8 +475,8 @@ void _exec_escape_bracket_command_with_args(
         case 'H':
         case 'f':
             // Direct Cursor Addressing (row;col)
-            state.cursor_col = max(0, min(screen_col_count - 1, ARG(1, 1) - 1));
-            state.cursor_row = state.top_row + max(0, min(screen_row_count - 1, ARG(0, 1) - 1));
+            state.cursor_col = max(0, min(display->screen_col_count - 1, ARG(1, 1) - 1));
+            state.cursor_row = state.top_row + max(0, min(display->screen_row_count - 1, ARG(0, 1) - 1));
             break;
 
         case 'J':
@@ -493,10 +489,10 @@ void _exec_escape_bracket_command_with_args(
                 const int16_t rel_row = state.cursor_row - state.top_row;
 
                 state.out_clear_before = ARG(0, 0) != 0
-                    ? rel_row * screen_col_count + state.cursor_col
+                    ? rel_row * display->screen_col_count + state.cursor_col
                     : 0;
                 state.out_clear_after = ARG(0, 0) != 1
-                    ? (screen_row_count - 1 - rel_row) * screen_col_count + (screen_col_count - 1 - state.cursor_col)
+                    ? (display->screen_row_count - 1 - rel_row) * display->screen_col_count + (display->screen_col_count - 1 - state.cursor_col)
                     : 0;
             }
 
@@ -512,7 +508,7 @@ void _exec_escape_bracket_command_with_args(
                 ? state.cursor_col
                 : 0;
             state.out_clear_after = ARG(0, 0) != 1
-                ? screen_col_count - 1 - state.cursor_col
+                ? display->screen_col_count - 1 - state.cursor_col
                 : 0;
 
             break;
@@ -537,7 +533,8 @@ void _exec_escape_bracket_command_with_args(
 void _exec_escape_bracket_command(
     char (*peek_char)(),
     char (*read_char)(),
-    void (*send_char)(char ch)
+    void (*send_char)(char ch),
+    tintty_display *display
 ) {
     const uint16_t MAX_COMMAND_ARG_COUNT = 10;
     uint16_t arg_list[MAX_COMMAND_ARG_COUNT];
@@ -567,6 +564,7 @@ void _exec_escape_bracket_command(
         peek_char,
         read_char,
         send_char,
+        display,
         arg_list,
         arg_count
     );
@@ -601,7 +599,8 @@ void _exec_character_set(
 void _exec_escape_code(
     char (*peek_char)(),
     char (*read_char)(),
-    void (*send_char)(char ch)
+    void (*send_char)(char ch),
+    tintty_display *display
 ) {
     // read next character after Escape-code
     // @todo time out?
@@ -610,26 +609,26 @@ void _exec_escape_code(
     // @todo support for (, ), #, c, cursor save/restore
     switch (esc_character) {
         case '[':
-            _exec_escape_bracket_command(peek_char, read_char, send_char);
+            _exec_escape_bracket_command(peek_char, read_char, send_char, display);
             break;
 
         case 'D':
             // index (move down and possibly scroll)
             state.cursor_row += 1;
-            _ensure_cursor_vscroll();
+            _ensure_cursor_vscroll(display);
             break;
 
         case 'M':
             // reverse index (move up and possibly scroll)
             state.cursor_row -= 1;
-            _ensure_cursor_vscroll();
+            _ensure_cursor_vscroll(display);
             break;
 
         case 'E':
             // next line
             state.cursor_row += 1;
             state.cursor_col = 0;
-            _ensure_cursor_vscroll();
+            _ensure_cursor_vscroll(display);
             break;
 
         case 'Z':
@@ -709,13 +708,13 @@ void _main(
         // update caret
         state.cursor_col += 1;
 
-        if (state.cursor_col >= screen_col_count) {
+        if (state.cursor_col >= display->screen_col_count) {
             if (state.no_wrap) {
-                state.cursor_col = screen_col_count - 1;
+                state.cursor_col = display->screen_col_count - 1;
             } else {
                 state.cursor_col = 0;
                 state.cursor_row += 1;
-                _ensure_cursor_vscroll();
+                _ensure_cursor_vscroll(display);
             }
         }
 
@@ -727,7 +726,7 @@ void _main(
             case '\n':
                 // line-feed
                 state.cursor_row += 1;
-                _ensure_cursor_vscroll();
+                _ensure_cursor_vscroll(display);
                 break;
 
             case '\r':
@@ -743,9 +742,9 @@ void _main(
                     if (state.no_wrap) {
                         state.cursor_col = 0;
                     } else {
-                        state.cursor_col = screen_col_count - 1;
+                        state.cursor_col = display->screen_col_count - 1;
                         state.cursor_row -= 1;
-                        _ensure_cursor_vscroll();
+                        _ensure_cursor_vscroll(display);
                     }
                 }
 
@@ -756,13 +755,13 @@ void _main(
                 {
                     // @todo blank out the existing characters? not sure if that is expected
                     const int16_t tab_num = state.cursor_col / TAB_SIZE;
-                    state.cursor_col = min(screen_col_count - 1, (tab_num + 1) * TAB_SIZE);
+                    state.cursor_col = min(display->screen_col_count - 1, (tab_num + 1) * TAB_SIZE);
                 }
                 break;
 
             case '\e':
                 // Escape-command
-                _exec_escape_code(peek_char, read_char, send_char);
+                _exec_escape_code(peek_char, read_char, send_char, display);
                 break;
 
             case '\x0f':

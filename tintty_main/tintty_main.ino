@@ -17,8 +17,14 @@
 // using stock MCUFRIEND 2.4inch shield
 MCUFRIEND_kbv tft;
 
+#define ILI9341_WIDTH 240
+#define ILI9341_HEIGHT 320
+
 struct tintty_display ili9341_display = {
-  240, 320,
+  ILI9341_WIDTH,
+  ILI9341_HEIGHT,
+  ILI9341_WIDTH / TINTTY_CHAR_WIDTH,
+  ILI9341_HEIGHT / TINTTY_CHAR_HEIGHT,
 
   [=](int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color){
     tft.fillRect(x, y, w, h, color);
