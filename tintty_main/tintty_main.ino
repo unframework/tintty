@@ -17,6 +17,29 @@
 // using stock MCUFRIEND 2.4inch shield
 MCUFRIEND_kbv tft;
 
+#define ILI9341_WIDTH 240
+#define ILI9341_HEIGHT 320
+
+struct tintty_display ili9341_display = {
+  ILI9341_WIDTH,
+  ILI9341_HEIGHT,
+  ILI9341_WIDTH / TINTTY_CHAR_WIDTH,
+  ILI9341_HEIGHT / TINTTY_CHAR_HEIGHT,
+
+  [=](int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color){
+    tft.fillRect(x, y, w, h, color);
+  },
+
+  [=](int16_t x, int16_t y, int16_t w, int16_t h, uint16_t *pixels){
+    tft.setAddrWindow(x, y, x + w - 1, y + h - 1);
+    tft.pushColors(pixels, w * h, 1);
+  },
+
+  [=](int16_t offset){
+    tft.vertScroll(0, 320, offset);
+  }
+};
+
 // input serial forwarder RX, TX (TX should not be used anyway)
 // @todo separate out to be configuration-specific and replace with touchscreen
 // SoftwareSerial inputSerial(9, 10);
@@ -31,7 +54,6 @@ void setup() {
 
   uint16_t tftID = tft.readID();
   tft.begin(tftID);
-  tft.fillScreen(0); // clear to black
 
   tintty_run(
     [=](){
@@ -39,27 +61,27 @@ void setup() {
       char test_char = test_buffer[test_buffer_cursor];
 
       if (test_char) {
-        tintty_idle(&tft);
+        tintty_idle(&ili9341_display);
         return test_char;
       }
 
       // fall back to normal blocking serial input
       while (Serial.available() < 1) {
-        tintty_idle(&tft);
+        tintty_idle(&ili9341_display);
       }
 
       return (char)Serial.peek();
     },
     [=](){
       // process at least one idle loop to allow input to happen
-      tintty_idle(&tft);
+      tintty_idle(&ili9341_display);
       input_idle();
 
       // first read from the test buffer
       char test_char = test_buffer[test_buffer_cursor];
 
       if (test_char) {
-        tintty_idle(&tft);
+        tintty_idle(&ili9341_display);
         input_idle();
 
         test_buffer_cursor += 1;
@@ -68,14 +90,14 @@ void setup() {
 
       // fall back to normal blocking serial input
       while (Serial.available() < 1) {
-        tintty_idle(&tft);
+        tintty_idle(&ili9341_display);
         input_idle();
       }
 
       return (char)Serial.read();
     },
     [=](char ch){ Serial.print(ch); },
-    &tft
+    &ili9341_display
   );
 }
 
