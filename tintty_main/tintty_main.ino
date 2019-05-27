@@ -101,6 +101,8 @@ struct touchKey {
 
 const int keyCount = sizeof(keyLayout) / sizeof(keyLayout[0]);
 
+struct touchKey *activeKey = NULL;
+
 struct tintty_display ili9341_display = {
   ILI9341_WIDTH,
   (ILI9341_HEIGHT - KEYBOARD_HEIGHT),
@@ -185,6 +187,26 @@ void setup() {
 void loop() {
 }
 
+void _input_draw_key(struct touchKey *key, bool isActive) {
+  uint16_t keyColor = isActive ? 0xFFFF : 0;
+  uint16_t borderColor = isActive ? 0xFFFF : tft.color565(0x80, 0x80, 0x80);
+  uint16_t textColor = isActive ? 0 : 0xFFFF;
+
+  tft.setTextColor(textColor);
+
+  const int16_t ox = key->cx - KEY_WIDTH / 2;
+  const int16_t oy = key->cy - KEY_HEIGHT / 2;
+
+  tft.drawFastHLine(ox, oy, KEY_WIDTH, borderColor);
+  tft.drawFastHLine(ox, oy + KEY_HEIGHT - 1, KEY_WIDTH, borderColor);
+  tft.drawFastVLine(ox, oy, KEY_HEIGHT, borderColor);
+  tft.drawFastVLine(ox + KEY_WIDTH - 1, oy, KEY_HEIGHT, borderColor);
+  tft.fillRect(ox + 1, oy + 1, KEY_WIDTH - 2, KEY_HEIGHT - 2, keyColor);
+
+  tft.setCursor(key->cx - 3, key->cy - 4);
+  tft.print(key->code);
+}
+
 void _input_process_touch(int16_t xpos, int16_t ypos) {
   for (int i = 0; i < keyCount; i++) {
     const struct touchKey *key = &keyLayout[i];
@@ -198,36 +220,35 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
     }
 
     // activate the key
+    activeKey = key;
+    break;
+  }
+
+  if (activeKey) {
+    _input_draw_key(activeKey, true);
+
     // @todo this
     test_buffer_cursor = 0;
-    test_buffer[0] = key->code;
+    test_buffer[0] = activeKey->code;
     test_buffer[1] = 0;
   }
 }
 
+void _input_process_release() {
+  _input_draw_key(activeKey, false);
+
+  activeKey = NULL;
+}
+
 void input_init() {
   uint16_t bgColor = tft.color565(0x20, 0x20, 0x20);
-  uint16_t borderColor = tft.color565(0x80, 0x80, 0x80);
-  uint16_t textColor = 0xFFFF;
 
   tft.fillRect(0, ILI9341_HEIGHT - KEYBOARD_HEIGHT, ILI9341_WIDTH, KEYBOARD_HEIGHT, bgColor);
 
   tft.setTextSize(1);
-  tft.setTextColor(textColor);
 
   for (int i = 0; i < keyCount; i++) {
-    const struct touchKey *key = &keyLayout[i];
-    const int16_t ox = key->cx - KEY_WIDTH / 2;
-    const int16_t oy = key->cy - KEY_HEIGHT / 2;
-
-    tft.drawFastHLine(ox, oy, KEY_WIDTH, 0xFFFF);
-    tft.drawFastHLine(ox, oy + KEY_HEIGHT - 1, KEY_WIDTH, 0xFFFF);
-    tft.drawFastVLine(ox, oy, KEY_HEIGHT, 0xFFFF);
-    tft.drawFastVLine(ox + KEY_WIDTH - 1, oy, KEY_HEIGHT, 0xFFFF);
-    tft.fillRect(ox + 1, oy + 1, KEY_WIDTH - 2, KEY_HEIGHT - 2, 0);
-
-    tft.setCursor(key->cx - 3, key->cy - 4);
-    tft.print(key->code);
+    _input_draw_key(&keyLayout[i], false);
   }
 }
 
@@ -275,6 +296,8 @@ void input_idle() {
     // flip status latch to off once settled back to zero
     if (!isRising && touchRisingCount == 0) {
       touchActive = false;
+
+      _input_process_release();
     }
   }
 }
