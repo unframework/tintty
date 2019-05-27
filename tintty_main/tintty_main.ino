@@ -29,10 +29,11 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 TSPoint tp;
 
 uint8_t touchCountdown = 0;
+#define TOUCH_POLL_FREQUENCY 40
 
 uint8_t touchRisingCount = 0; // debounce counter for latch transition
 bool touchActive = false; // touch status latch state
-#define TOUCH_TRIGGER_COUNT 5
+#define TOUCH_TRIGGER_COUNT 20
 
 #define MINPRESSURE 200
 #define MAXPRESSURE 1000
@@ -131,7 +132,7 @@ void input_idle() {
     return;
   }
 
-  touchCountdown = 20;
+  touchCountdown = TOUCH_POLL_FREQUENCY;
 
   // get raw touch values and reset the mode of the touchscreen pins due to them being shared
   tp = ts.getPoint();
