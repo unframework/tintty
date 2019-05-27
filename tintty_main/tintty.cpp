@@ -1,6 +1,3 @@
-// @todo move out direct TFT references
-#include <MCUFRIEND_kbv.h>
-
 #define TFT_BLACK   0x0000
 #define TFT_BLUE    0x0014
 #define TFT_RED     0xA000
@@ -90,7 +87,7 @@ struct tintty_rendered {
 } rendered;
 
 // @todo support negative cursor_row
-void _render(MCUFRIEND_kbv *tft) {
+void _render(tintty_display *display) {
     // if scrolling, prepare the "recycled" screen area
     if (state.top_row != rendered.top_row) {
         // clear the new piece of screen to be recycled as blank space
@@ -107,7 +104,7 @@ void _render(MCUFRIEND_kbv *tft) {
 
             // if rectangle straddles the screen buffer top edge, render that slice at bottom edge
             if (clear_sbuf_top < 0) {
-                tft->fillRect(
+                display->fill_rect(
                     0,
                     clear_sbuf_top + SCREEN_HEIGHT,
                     SCREEN_WIDTH,
@@ -118,7 +115,7 @@ void _render(MCUFRIEND_kbv *tft) {
 
             // if rectangle is not entirely above top edge, render the normal slice
             if (clear_sbuf_bottom > 0) {
-                tft->fillRect(
+                display->fill_rect(
                     0,
                     max(0, clear_sbuf_top),
                     SCREEN_WIDTH,
@@ -129,7 +126,7 @@ void _render(MCUFRIEND_kbv *tft) {
         }
 
         // update displayed scroll
-        tft->vertScroll(0, SCREEN_HEIGHT, (state.top_row * CHAR_HEIGHT) % SCREEN_HEIGHT); // @todo deal with overflow from multiplication
+        display->set_vscroll((state.top_row * CHAR_HEIGHT) % SCREEN_HEIGHT); // @todo deal with overflow from multiplication
 
         // save rendered state
         rendered.top_row = state.top_row;
@@ -183,32 +180,22 @@ void _render(MCUFRIEND_kbv *tft) {
         const int preWrapHeight = min(SCREEN_HEIGHT - y, 6);
         const int postWrapHeight = 6 - preWrapHeight;
 
-        tft->setAddrWindow(
+        display->draw_pixels(
             x,
             y,
-            x + 3,
-            y + preWrapHeight - 1
-        );
-
-        tft->pushColors(
-            pushedData,
-            4 * preWrapHeight,
-            1
+            4,
+            preWrapHeight,
+            pushedData
         );
 
         // perform TFT data push wrapped around from top edge of buffer
         if (postWrapHeight > 0) {
-            tft->setAddrWindow(
+            display->draw_pixels(
                 x,
                 0,
-                x + 3,
-                postWrapHeight - 1
-            );
-
-            tft->pushColors(
-                pushedData + 4 * preWrapHeight,
-                4 * postWrapHeight,
-                1
+                4,
+                postWrapHeight,
+                pushedData + 4 * preWrapHeight
             );
         }
 
@@ -218,7 +205,7 @@ void _render(MCUFRIEND_kbv *tft) {
             const int16_t line_before_chars = min(state.out_char_col, state.out_clear_before);
             const int16_t lines_before = (state.out_clear_before - line_before_chars) / screen_col_count;
 
-            tft->fillRect(
+            display->fill_rect(
                 (state.out_char_col - line_before_chars) * CHAR_WIDTH,
                 (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 line_before_chars * CHAR_WIDTH,
@@ -227,7 +214,7 @@ void _render(MCUFRIEND_kbv *tft) {
             );
 
             for (int16_t i = 0; i < lines_before; i += 1) {
-                tft->fillRect(
+                display->fill_rect(
                     0,
                     ((state.out_char_row - 1 - i) * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                     SCREEN_WIDTH,
@@ -243,7 +230,7 @@ void _render(MCUFRIEND_kbv *tft) {
             const int16_t line_after_chars = min(screen_col_count - 1 - state.out_char_col, state.out_clear_after);
             const int16_t lines_after = (state.out_clear_after - line_after_chars) / screen_col_count;
 
-            tft->fillRect(
+            display->fill_rect(
                 (state.out_char_col + 1) * CHAR_WIDTH,
                 (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 line_after_chars * CHAR_WIDTH,
@@ -252,7 +239,7 @@ void _render(MCUFRIEND_kbv *tft) {
             );
 
             for (int16_t i = 0; i < lines_after; i += 1) {
-                tft->fillRect(
+                display->fill_rect(
                     0,
                     ((state.out_char_row + 1 + i) * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                     SCREEN_WIDTH,
@@ -291,7 +278,7 @@ void _render(MCUFRIEND_kbv *tft) {
             rendered.cursor_col != state.cursor_col ||
             rendered.cursor_row != state.cursor_row
         ) {
-            tft->fillRect(
+            display->fill_rect(
                 rendered.cursor_col * CHAR_WIDTH,
                 (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 CHAR_WIDTH,
@@ -308,7 +295,7 @@ void _render(MCUFRIEND_kbv *tft) {
     // (sometimes right after clearing existing bar)
     if (rendered.cursor_col < 0) {
         if (cursor_bar_shown) {
-            tft->fillRect(
+            display->fill_rect(
                 state.cursor_col * CHAR_WIDTH,
                 (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 CHAR_WIDTH,
@@ -708,7 +695,7 @@ void _main(
     char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char str),
-    MCUFRIEND_kbv *tft
+    tintty_display *display
 ) {
     // start in default idle state
     char initial_character = read_char();
@@ -796,14 +783,14 @@ void _main(
         }
     }
 
-    _render(tft);
+    _render(display);
 }
 
 void tintty_run(
     char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char str),
-    MCUFRIEND_kbv *tft
+    tintty_display *display
 ) {
     // set up initial state
     state.cursor_col = 0;
@@ -833,11 +820,14 @@ void tintty_run(
     rendered.cursor_col = -1;
     rendered.cursor_row = -1;
 
+    // clear screen
+    display->fill_rect(0, 0, display->screen_width, display->screen_height, TFT_BLACK);
+
     // reset TFT scroll to default
-    tft->vertScroll(0, SCREEN_HEIGHT, 0);
+    display->set_vscroll(0);
 
     // initial render
-    _render(tft);
+    _render(display);
 
     // send CR to indicate that the screen is ready
     // (this works with the agetty --wait-cr option to help wait until Arduino boots)
@@ -845,16 +835,16 @@ void tintty_run(
 
     // main read cycle
     while (1) {
-        _main(peek_char, read_char, send_char, tft);
+        _main(peek_char, read_char, send_char, display);
     }
 }
 
 void tintty_idle(
-    MCUFRIEND_kbv *tft
+    tintty_display *display
 ) {
     // animate cursor
     state.idle_cycle_count = (state.idle_cycle_count + 1) % IDLE_CYCLE_MAX;
 
     // re-render
-    _render(tft);
+    _render(display);
 }
