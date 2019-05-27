@@ -38,11 +38,74 @@ bool touchActive = false; // touch status latch state
 #define MINPRESSURE 200
 #define MAXPRESSURE 1000
 
+#define KEYBOARD_HEIGHT 90
+#define KEYBOARD_GUTTER 4
+
+#define KEY_ROW_A_Y (ILI9341_HEIGHT - KEYBOARD_HEIGHT + KEYBOARD_GUTTER + KEY_HEIGHT / 2)
+#define KEY_ROW_B_Y (KEY_ROW_A_Y + KEY_GUTTER + KEY_HEIGHT)
+#define KEY_ROW_C_Y (KEY_ROW_B_Y + KEY_GUTTER + KEY_HEIGHT)
+#define KEY_ROW_D_Y (KEY_ROW_C_Y + KEY_GUTTER + KEY_HEIGHT)
+#define KEY_WIDTH 18
+#define KEY_HEIGHT 14
+#define KEY_GUTTER 2
+
+#define KEY_ROW_A(index) (14 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_A_Y
+#define KEY_ROW_B(index) (22 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_B_Y
+#define KEY_ROW_C(index) (30 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_C_Y
+#define KEY_ROW_D(index) (38 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_D_Y
+
+struct touchKey {
+  int16_t cx, cy;
+  char code;
+} keyLayout[] = {
+  { KEY_ROW_A(0), '0' },
+  { KEY_ROW_A(1), '1' },
+  { KEY_ROW_A(2), '2' },
+  { KEY_ROW_A(3), '3' },
+  { KEY_ROW_A(4), '4' },
+  { KEY_ROW_A(5), '5' },
+  { KEY_ROW_A(6), '6' },
+  { KEY_ROW_A(7), '7' },
+  { KEY_ROW_A(8), '8' },
+  { KEY_ROW_A(9), '9' },
+
+  { KEY_ROW_B(0), 'Q' },
+  { KEY_ROW_B(1), 'W' },
+  { KEY_ROW_B(2), 'E' },
+  { KEY_ROW_B(3), 'R' },
+  { KEY_ROW_B(4), 'T' },
+  { KEY_ROW_B(5), 'Y' },
+  { KEY_ROW_B(6), 'U' },
+  { KEY_ROW_B(7), 'I' },
+  { KEY_ROW_B(8), 'O' },
+  { KEY_ROW_B(9), 'P' },
+
+  { KEY_ROW_C(0), 'A' },
+  { KEY_ROW_C(1), 'S' },
+  { KEY_ROW_C(2), 'D' },
+  { KEY_ROW_C(3), 'F' },
+  { KEY_ROW_C(4), 'G' },
+  { KEY_ROW_C(5), 'H' },
+  { KEY_ROW_C(6), 'J' },
+  { KEY_ROW_C(7), 'K' },
+  { KEY_ROW_C(8), 'L' },
+
+  { KEY_ROW_D(0), 'Z' },
+  { KEY_ROW_D(1), 'X' },
+  { KEY_ROW_D(2), 'C' },
+  { KEY_ROW_D(3), 'V' },
+  { KEY_ROW_D(4), 'B' },
+  { KEY_ROW_D(5), 'N' },
+  { KEY_ROW_D(6), 'M' }
+};
+
+const int keyCount = sizeof(keyLayout) / sizeof(keyLayout[0]);
+
 struct tintty_display ili9341_display = {
   ILI9341_WIDTH,
-  ILI9341_HEIGHT,
+  (ILI9341_HEIGHT - KEYBOARD_HEIGHT),
   ILI9341_WIDTH / TINTTY_CHAR_WIDTH,
-  ILI9341_HEIGHT / TINTTY_CHAR_HEIGHT,
+  (ILI9341_HEIGHT - KEYBOARD_HEIGHT) / TINTTY_CHAR_HEIGHT,
 
   [=](int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color){
     tft.fillRect(x, y, w, h, color);
@@ -54,7 +117,7 @@ struct tintty_display ili9341_display = {
   },
 
   [=](int16_t offset){
-    tft.vertScroll(0, 320, offset);
+    tft.vertScroll(0, (ILI9341_HEIGHT - KEYBOARD_HEIGHT), offset);
   }
 };
 
@@ -72,6 +135,8 @@ void setup() {
 
   uint16_t tftID = tft.readID();
   tft.begin(tftID);
+
+  input_init();
 
   tintty_run(
     [=](){
@@ -118,6 +183,32 @@ void setup() {
 }
 
 void loop() {
+}
+
+void input_init() {
+  uint16_t bgColor = tft.color565(0x20, 0x20, 0x20);
+  uint16_t borderColor = tft.color565(0x80, 0x80, 0x80);
+  uint16_t textColor = 0xFFFF;
+
+  tft.fillRect(0, ILI9341_HEIGHT - KEYBOARD_HEIGHT, ILI9341_WIDTH, KEYBOARD_HEIGHT, bgColor);
+
+  tft.setTextSize(1);
+  tft.setTextColor(textColor);
+
+  for (int i = 0; i < keyCount; i++) {
+    const struct touchKey *key = &keyLayout[i];
+    const int16_t ox = key->cx - KEY_WIDTH / 2;
+    const int16_t oy = key->cy - KEY_HEIGHT / 2;
+
+    tft.drawFastHLine(ox, oy, KEY_WIDTH, 0xFFFF);
+    tft.drawFastHLine(ox, oy + KEY_HEIGHT - 1, KEY_WIDTH, 0xFFFF);
+    tft.drawFastVLine(ox, oy, KEY_HEIGHT, 0xFFFF);
+    tft.drawFastVLine(ox + KEY_WIDTH - 1, oy, KEY_HEIGHT, 0xFFFF);
+    tft.fillRect(ox + 1, oy + 1, KEY_WIDTH - 2, KEY_HEIGHT - 2, 0);
+
+    tft.setCursor(key->cx - 3, key->cy - 4);
+    tft.print(key->code);
+  }
 }
 
 void input_idle() {
