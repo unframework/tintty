@@ -38,7 +38,7 @@ bool touchActive = false; // touch status latch state
 #define MINPRESSURE 200
 #define MAXPRESSURE 1000
 
-#define KEYBOARD_HEIGHT 90
+#define KEYBOARD_HEIGHT 96
 #define KEYBOARD_GUTTER 4
 
 #define KEY_ROW_A_Y (ILI9341_HEIGHT - KEYBOARD_HEIGHT + KEYBOARD_GUTTER + KEY_HEIGHT / 2)
@@ -46,8 +46,8 @@ bool touchActive = false; // touch status latch state
 #define KEY_ROW_C_Y (KEY_ROW_B_Y + KEY_GUTTER + KEY_HEIGHT)
 #define KEY_ROW_D_Y (KEY_ROW_C_Y + KEY_GUTTER + KEY_HEIGHT)
 #define KEY_WIDTH 18
-#define KEY_HEIGHT 14
-#define KEY_GUTTER 2
+#define KEY_HEIGHT 16
+#define KEY_GUTTER 1
 
 #define KEY_ROW_A(index) (14 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_A_Y
 #define KEY_ROW_B(index) (22 + (KEY_WIDTH + KEY_GUTTER) * index), KEY_ROW_B_Y
@@ -185,6 +185,26 @@ void setup() {
 void loop() {
 }
 
+void _input_process_touch(int16_t xpos, int16_t ypos) {
+  for (int i = 0; i < keyCount; i++) {
+    const struct touchKey *key = &keyLayout[i];
+
+    if (xpos < key->cx - KEY_WIDTH / 2 || xpos > key->cx + KEY_WIDTH / 2) {
+      continue;
+    }
+
+    if (ypos < key->cy - KEY_HEIGHT / 2 || ypos > key->cy + KEY_HEIGHT / 2) {
+      continue;
+    }
+
+    // activate the key
+    // @todo this
+    test_buffer_cursor = 0;
+    test_buffer[0] = key->code;
+    test_buffer[1] = 0;
+  }
+}
+
 void input_init() {
   uint16_t bgColor = tft.color565(0x20, 0x20, 0x20);
   uint16_t borderColor = tft.color565(0x80, 0x80, 0x80);
@@ -248,9 +268,8 @@ void input_idle() {
       const uint16_t xpos = map(tp.x, TS_LEFT, TS_RT, 0, ILI9341_WIDTH);
       const uint16_t ypos = map(tp.y, TS_TOP, TS_BOT, 0, ILI9341_HEIGHT);
 
-      // trigger debug display for now
-      // @todo this
-      test_buffer_cursor = 0;
+      // @todo support autorepeat
+      _input_process_touch(xpos, ypos);
     }
   } else if (touchActive) {
     // flip status latch to off once settled back to zero
