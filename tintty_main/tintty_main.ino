@@ -102,8 +102,7 @@ void setup() {
         input_idle();
       }
 
-      test_buffer_cursor += 1;
-      return test_buffer[test_buffer_cursor];
+      return test_buffer[test_buffer_cursor++];
 
       // // fall back to normal blocking serial input
       // while (Serial.available() < 1) {
