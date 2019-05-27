@@ -8,12 +8,12 @@ void tintty_run(
     char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char str),
-    TFT_ILI9163C *tft
+    MCUFRIEND_kbv *tft
 );
 
 /**
  * Hook to call while e.g. sketch is waiting for input
  */
 void tintty_idle(
-    TFT_ILI9163C *tft
+    MCUFRIEND_kbv *tft
 );

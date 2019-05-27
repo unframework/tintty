@@ -10,18 +10,16 @@
 #include <SoftwareSerial.h>
 
 #include <Adafruit_GFX.h>
-#include <TFT_ILI9163C.h>
+#include <MCUFRIEND_kbv.h>
 
 #include "tintty.h"
 
-// this is following a tutorial-recommended pinout, but changing
-// the SPI CS and RS pins for the TFT to be 5 and 4 to avoid
-// device conflict with USB Host Shield
-// @todo rethink, now that USB Host Shield is not used directly
-TFT_ILI9163C tft = TFT_ILI9163C(5, 8, 4);
+// using stock MCUFRIEND 2.4inch shield
+MCUFRIEND_kbv tft;
 
 // input serial forwarder RX, TX (TX should not be used anyway)
-SoftwareSerial inputSerial(9, 10);
+// @todo separate out to be configuration-specific and replace with touchscreen
+// SoftwareSerial inputSerial(9, 10);
 
 // buffer to test various input sequences
 char *test_buffer = "-- \e[1mTinTTY\e[m --\r\n";
@@ -29,9 +27,11 @@ uint8_t test_buffer_cursor = 0;
 
 void setup() {
   Serial.begin(9600); // normal baud-rate
-  inputSerial.begin(9600); // normal baud-rate
+  // inputSerial.begin(9600); // normal baud-rate
 
-  tft.begin();
+  uint16_t tftID = tft.readID();
+  tft.begin(tftID);
+  tft.fillScreen(0); // clear to black
 
   tintty_run(
     [=](){
@@ -83,7 +83,7 @@ void loop() {
 }
 
 void input_idle() {
-  if (inputSerial.available()) {
-    Serial.write(inputSerial.read());
-  }
+  // if (inputSerial.available()) {
+  //   Serial.write(inputSerial.read());
+  // }
 }

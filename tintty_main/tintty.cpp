@@ -1,5 +1,5 @@
 // @todo move out direct TFT references
-#include <TFT_ILI9163C.h>
+#include <MCUFRIEND_kbv.h>
 
 #define TFT_BLACK   0x0000
 #define TFT_BLUE    0x0014
@@ -22,8 +22,8 @@
 #include "tintty.h"
 #include "font454.h"
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 128
+#define SCREEN_WIDTH 240
+#define SCREEN_HEIGHT 320
 #define CHAR_WIDTH 4
 #define CHAR_HEIGHT 6
 
@@ -57,6 +57,7 @@ const int16_t IDLE_CYCLE_ON = 12500;
 
 const int16_t TAB_SIZE = 4;
 
+// cursor and character position is in global buffer coordinate space (may exceed screen height)
 struct tintty_state {
     // @todo consider storing cursor position as single int offset
     int16_t cursor_col, cursor_row;
@@ -89,7 +90,7 @@ struct tintty_rendered {
 } rendered;
 
 // @todo support negative cursor_row
-void _render(TFT_ILI9163C *tft) {
+void _render(MCUFRIEND_kbv *tft) {
     // if scrolling, prepare the "recycled" screen area
     if (state.top_row != rendered.top_row) {
         // clear the new piece of screen to be recycled as blank space
@@ -97,6 +98,7 @@ void _render(TFT_ILI9163C *tft) {
         if (state.top_row > rendered.top_row) {
             // pre-clear the lines at the bottom
             // @todo always use black instead of current background colour?
+            // @todo deal with overflow from multiplication by CHAR_HEIGHT
             int16_t old_bottom_y = rendered.top_row * CHAR_HEIGHT + screen_row_count * CHAR_HEIGHT; // bottom of text may not align with screen height
             int16_t new_bottom_y = state.top_row * CHAR_HEIGHT + SCREEN_HEIGHT; // extend to bottom edge of new displayed area
             int16_t clear_sbuf_bottom = new_bottom_y % SCREEN_HEIGHT;
@@ -127,7 +129,7 @@ void _render(TFT_ILI9163C *tft) {
         }
 
         // update displayed scroll
-        tft->scroll((state.top_row * CHAR_HEIGHT) % SCREEN_HEIGHT);
+        tft->vertScroll(0, SCREEN_HEIGHT, (state.top_row * CHAR_HEIGHT) % SCREEN_HEIGHT); // @todo deal with overflow from multiplication
 
         // save rendered state
         rendered.top_row = state.top_row;
@@ -135,22 +137,15 @@ void _render(TFT_ILI9163C *tft) {
 
     // render character if needed
     if (state.out_char != 0) {
-        const uint8_t x = state.out_char_col * CHAR_WIDTH;
-        const uint8_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT;
+        const uint16_t x = state.out_char_col * CHAR_WIDTH;
+        const uint16_t y = (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT; // @todo deal with overflow from multiplication
         const uint16_t fg_tft_color = state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color];
         const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
 
-        const uint8_t y2 = y + 5;
+        // compute pixel data for pushing to TFT
+        const uint16_t pushedData[4 * 6];
+        uint16_t *pushedDataHead = pushedData; // pointer to latest pixel in pushedData
 
-        // declare TFT data push up to bottom edge of buffer
-        tft->startPushData(
-            x,
-            y,
-            x + 3,
-            min(SCREEN_HEIGHT - 1, y2)
-        );
-
-        // TFT data push
         const uint8_t char_set = state.g4bank_char_set[state.out_char_g4bank & 0x03]; // ensure 0-3 value
         const int char_base = (
             (char_set & 0x01) * 128 + // ensure 0-1 value
@@ -168,16 +163,6 @@ void _render(TFT_ILI9163C *tft) {
         for (int char_font_row = 0; char_font_row < 6; char_font_row++) {
             const unsigned char font_hline = pgm_read_byte(&font454[char_base + char_font_row]);
 
-            // re-declare TFT data push if we wrapped around bottom edge of buffer
-            if (y + char_font_row == SCREEN_HEIGHT) {
-                tft->startPushData(
-                    x,
-                    0,
-                    x + 3,
-                    y2
-                );
-            }
-
             for (int char_font_bitoffset = 6; char_font_bitoffset >= 0; char_font_bitoffset -= 2) {
                 const unsigned char font_hline_mask = 3 << char_font_bitoffset;
                 const unsigned char fg_value = (font_hline & font_hline_mask) >> char_font_bitoffset;
@@ -189,11 +174,43 @@ void _render(TFT_ILI9163C *tft) {
                 const uint16_t g = (fg_g * fg_value + bg_g * bg_value) << 5;
                 const uint16_t r = (fg_r * fg_value + bg_r * bg_value) << 11;
 
-                tft->pushData(r | g | b);
+                *pushedDataHead = (r | g | b);
+                pushedDataHead++;
             }
         }
 
-        tft->endPushData();
+        // perform TFT data push up to bottom edge of buffer
+        const int preWrapHeight = min(SCREEN_HEIGHT - y, 6);
+        const int postWrapHeight = 6 - preWrapHeight;
+
+        tft->setAddrWindow(
+            x,
+            y,
+            x + 3,
+            y + preWrapHeight - 1
+        );
+
+        tft->pushColors(
+            pushedData,
+            4 * preWrapHeight,
+            1
+        );
+
+        // perform TFT data push wrapped around from top edge of buffer
+        if (postWrapHeight > 0) {
+            tft->setAddrWindow(
+                x,
+                0,
+                x + 3,
+                postWrapHeight - 1
+            );
+
+            tft->pushColors(
+                pushedData + 4 * preWrapHeight,
+                4 * postWrapHeight,
+                1
+            );
+        }
 
         // line-before
         // @todo detect when straddling edge of buffer
@@ -203,7 +220,7 @@ void _render(TFT_ILI9163C *tft) {
 
             tft->fillRect(
                 (state.out_char_col - line_before_chars) * CHAR_WIDTH,
-                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 line_before_chars * CHAR_WIDTH,
                 CHAR_HEIGHT,
                 ANSI_COLORS[state.bg_ansi_color]
@@ -212,7 +229,7 @@ void _render(TFT_ILI9163C *tft) {
             for (int16_t i = 0; i < lines_before; i += 1) {
                 tft->fillRect(
                     0,
-                    ((state.out_char_row - 1 - i) * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                    ((state.out_char_row - 1 - i) * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                     SCREEN_WIDTH,
                     CHAR_HEIGHT,
                     ANSI_COLORS[state.bg_ansi_color]
@@ -228,7 +245,7 @@ void _render(TFT_ILI9163C *tft) {
 
             tft->fillRect(
                 (state.out_char_col + 1) * CHAR_WIDTH,
-                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                (state.out_char_row * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 line_after_chars * CHAR_WIDTH,
                 CHAR_HEIGHT,
                 ANSI_COLORS[state.bg_ansi_color]
@@ -237,7 +254,7 @@ void _render(TFT_ILI9163C *tft) {
             for (int16_t i = 0; i < lines_after; i += 1) {
                 tft->fillRect(
                     0,
-                    ((state.out_char_row + 1 + i) * CHAR_HEIGHT) % SCREEN_HEIGHT,
+                    ((state.out_char_row + 1 + i) * CHAR_HEIGHT) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                     SCREEN_WIDTH,
                     CHAR_HEIGHT,
                     ANSI_COLORS[state.bg_ansi_color]
@@ -276,7 +293,7 @@ void _render(TFT_ILI9163C *tft) {
         ) {
             tft->fillRect(
                 rendered.cursor_col * CHAR_WIDTH,
-                (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
+                (rendered.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 CHAR_WIDTH,
                 1,
                 ANSI_COLORS[state.bg_ansi_color] // @todo save the original background colour or even pixel values
@@ -293,7 +310,7 @@ void _render(TFT_ILI9163C *tft) {
         if (cursor_bar_shown) {
             tft->fillRect(
                 state.cursor_col * CHAR_WIDTH,
-                (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT,
+                (state.cursor_row * CHAR_HEIGHT + CHAR_HEIGHT - 1) % SCREEN_HEIGHT, // @todo deal with overflow from multiplication
                 CHAR_WIDTH,
                 1,
                 state.bold ? ANSI_BOLD_COLORS[state.fg_ansi_color] : ANSI_COLORS[state.fg_ansi_color]
@@ -691,7 +708,7 @@ void _main(
     char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char str),
-    TFT_ILI9163C *tft
+    MCUFRIEND_kbv *tft
 ) {
     // start in default idle state
     char initial_character = read_char();
@@ -786,7 +803,7 @@ void tintty_run(
     char (*peek_char)(),
     char (*read_char)(),
     void (*send_char)(char str),
-    TFT_ILI9163C *tft
+    MCUFRIEND_kbv *tft
 ) {
     // set up initial state
     state.cursor_col = 0;
@@ -816,10 +833,8 @@ void tintty_run(
     rendered.cursor_col = -1;
     rendered.cursor_row = -1;
 
-    // set up fullscreen TFT scroll
-    // magic value for second parameter (bottom-fixed-area)
-    // compensate for extra length of graphical RAM (GRAM)
-    tft->defineScrollArea(0, 32);
+    // reset TFT scroll to default
+    tft->vertScroll(0, SCREEN_HEIGHT, 0);
 
     // initial render
     _render(tft);
@@ -835,7 +850,7 @@ void tintty_run(
 }
 
 void tintty_idle(
-    TFT_ILI9163C *tft
+    MCUFRIEND_kbv *tft
 ) {
     // animate cursor
     state.idle_cycle_count = (state.idle_cycle_count + 1) % IDLE_CYCLE_MAX;
