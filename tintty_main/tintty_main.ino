@@ -56,60 +56,81 @@ bool touchActive = false; // touch status latch state
 #define KEY_ROW_C_X(index) (30 + (KEY_WIDTH + KEY_GUTTER) * index)
 #define KEY_ROW_D_X(index) (38 + (KEY_WIDTH + KEY_GUTTER) * index)
 
+#define KEY_LSHIFT_WIDTH (KEY_ROW_D_X(0) - KEY_WIDTH / 2 - KEY_GUTTER - 1)
+#define KEY_RSHIFT_WIDTH (ILI9341_WIDTH - KEY_ROW_D_X(9) - KEY_WIDTH / 2 - KEY_GUTTER - 1)
+
+#define KEYCODE_SHIFT 200
+
 struct touchKey {
   int16_t cx, cy, width;
-  char code;
+  char code, char label;
 } keyLayout[] = {
-  { KEY_ROW_A_X(0), KEY_ROW_A_Y, KEY_WIDTH, '`' },
-  { KEY_ROW_A_X(1), KEY_ROW_A_Y, KEY_WIDTH, '1' },
-  { KEY_ROW_A_X(2), KEY_ROW_A_Y, KEY_WIDTH, '2' },
-  { KEY_ROW_A_X(3), KEY_ROW_A_Y, KEY_WIDTH, '3' },
-  { KEY_ROW_A_X(4), KEY_ROW_A_Y, KEY_WIDTH, '4' },
-  { KEY_ROW_A_X(5), KEY_ROW_A_Y, KEY_WIDTH, '5' },
-  { KEY_ROW_A_X(6), KEY_ROW_A_Y, KEY_WIDTH, '6' },
-  { KEY_ROW_A_X(7), KEY_ROW_A_Y, KEY_WIDTH, '7' },
-  { KEY_ROW_A_X(8), KEY_ROW_A_Y, KEY_WIDTH, '8' },
-  { KEY_ROW_A_X(9), KEY_ROW_A_Y, KEY_WIDTH, '9' },
-  { KEY_ROW_A_X(10), KEY_ROW_A_Y, KEY_WIDTH, '0' },
-  { KEY_ROW_A_X(11), KEY_ROW_A_Y, KEY_WIDTH, '-' },
-  { KEY_ROW_A_X(12), KEY_ROW_A_Y, KEY_WIDTH, '=' },
+  { KEY_ROW_A_X(0), KEY_ROW_A_Y, KEY_WIDTH, '`', '`' },
+  { KEY_ROW_A_X(1), KEY_ROW_A_Y, KEY_WIDTH, '1', '1' },
+  { KEY_ROW_A_X(2), KEY_ROW_A_Y, KEY_WIDTH, '2', '2' },
+  { KEY_ROW_A_X(3), KEY_ROW_A_Y, KEY_WIDTH, '3', '3' },
+  { KEY_ROW_A_X(4), KEY_ROW_A_Y, KEY_WIDTH, '4', '4' },
+  { KEY_ROW_A_X(5), KEY_ROW_A_Y, KEY_WIDTH, '5', '5' },
+  { KEY_ROW_A_X(6), KEY_ROW_A_Y, KEY_WIDTH, '6', '6' },
+  { KEY_ROW_A_X(7), KEY_ROW_A_Y, KEY_WIDTH, '7', '7' },
+  { KEY_ROW_A_X(8), KEY_ROW_A_Y, KEY_WIDTH, '8', '8' },
+  { KEY_ROW_A_X(9), KEY_ROW_A_Y, KEY_WIDTH, '9', '9' },
+  { KEY_ROW_A_X(10), KEY_ROW_A_Y, KEY_WIDTH, '0', '0' },
+  { KEY_ROW_A_X(11), KEY_ROW_A_Y, KEY_WIDTH, '-', '-' },
+  { KEY_ROW_A_X(12), KEY_ROW_A_Y, KEY_WIDTH, '=', '=' },
 
-  { KEY_ROW_B_X(0), KEY_ROW_B_Y, KEY_WIDTH, 'Q' },
-  { KEY_ROW_B_X(1), KEY_ROW_B_Y, KEY_WIDTH, 'W' },
-  { KEY_ROW_B_X(2), KEY_ROW_B_Y, KEY_WIDTH, 'E' },
-  { KEY_ROW_B_X(3), KEY_ROW_B_Y, KEY_WIDTH, 'R' },
-  { KEY_ROW_B_X(4), KEY_ROW_B_Y, KEY_WIDTH, 'T' },
-  { KEY_ROW_B_X(5), KEY_ROW_B_Y, KEY_WIDTH, 'Y' },
-  { KEY_ROW_B_X(6), KEY_ROW_B_Y, KEY_WIDTH, 'U' },
-  { KEY_ROW_B_X(7), KEY_ROW_B_Y, KEY_WIDTH, 'I' },
-  { KEY_ROW_B_X(8), KEY_ROW_B_Y, KEY_WIDTH, 'O' },
-  { KEY_ROW_B_X(9), KEY_ROW_B_Y, KEY_WIDTH, 'P' },
-  { KEY_ROW_B_X(10), KEY_ROW_B_Y, KEY_WIDTH, '[' },
-  { KEY_ROW_B_X(11), KEY_ROW_B_Y, KEY_WIDTH, ']' },
+  { KEY_ROW_B_X(0), KEY_ROW_B_Y, KEY_WIDTH, 'Q', 'Q' },
+  { KEY_ROW_B_X(1), KEY_ROW_B_Y, KEY_WIDTH, 'W', 'W' },
+  { KEY_ROW_B_X(2), KEY_ROW_B_Y, KEY_WIDTH, 'E', 'E' },
+  { KEY_ROW_B_X(3), KEY_ROW_B_Y, KEY_WIDTH, 'R', 'R' },
+  { KEY_ROW_B_X(4), KEY_ROW_B_Y, KEY_WIDTH, 'T', 'T' },
+  { KEY_ROW_B_X(5), KEY_ROW_B_Y, KEY_WIDTH, 'Y', 'Y' },
+  { KEY_ROW_B_X(6), KEY_ROW_B_Y, KEY_WIDTH, 'U', 'U' },
+  { KEY_ROW_B_X(7), KEY_ROW_B_Y, KEY_WIDTH, 'I', 'I' },
+  { KEY_ROW_B_X(8), KEY_ROW_B_Y, KEY_WIDTH, 'O', 'O' },
+  { KEY_ROW_B_X(9), KEY_ROW_B_Y, KEY_WIDTH, 'P', 'P' },
+  { KEY_ROW_B_X(10), KEY_ROW_B_Y, KEY_WIDTH, '[', '[' },
+  { KEY_ROW_B_X(11), KEY_ROW_B_Y, KEY_WIDTH, ']', ']' },
 
-  { KEY_ROW_C_X(0), KEY_ROW_C_Y, KEY_WIDTH, 'A' },
-  { KEY_ROW_C_X(1), KEY_ROW_C_Y, KEY_WIDTH, 'S' },
-  { KEY_ROW_C_X(2), KEY_ROW_C_Y, KEY_WIDTH, 'D' },
-  { KEY_ROW_C_X(3), KEY_ROW_C_Y, KEY_WIDTH, 'F' },
-  { KEY_ROW_C_X(4), KEY_ROW_C_Y, KEY_WIDTH, 'G' },
-  { KEY_ROW_C_X(5), KEY_ROW_C_Y, KEY_WIDTH, 'H' },
-  { KEY_ROW_C_X(6), KEY_ROW_C_Y, KEY_WIDTH, 'J' },
-  { KEY_ROW_C_X(7), KEY_ROW_C_Y, KEY_WIDTH, 'K' },
-  { KEY_ROW_C_X(8), KEY_ROW_C_Y, KEY_WIDTH, 'L' },
-  { KEY_ROW_C_X(9), KEY_ROW_C_Y, KEY_WIDTH, ';' },
-  { KEY_ROW_C_X(10), KEY_ROW_C_Y, KEY_WIDTH, '\'' },
-  { KEY_ROW_C_X(11), KEY_ROW_C_Y, KEY_WIDTH, '\\' },
+  { KEY_ROW_C_X(0), KEY_ROW_C_Y, KEY_WIDTH, 'A', 'A' },
+  { KEY_ROW_C_X(1), KEY_ROW_C_Y, KEY_WIDTH, 'S', 'S' },
+  { KEY_ROW_C_X(2), KEY_ROW_C_Y, KEY_WIDTH, 'D', 'D' },
+  { KEY_ROW_C_X(3), KEY_ROW_C_Y, KEY_WIDTH, 'F', 'F' },
+  { KEY_ROW_C_X(4), KEY_ROW_C_Y, KEY_WIDTH, 'G', 'G' },
+  { KEY_ROW_C_X(5), KEY_ROW_C_Y, KEY_WIDTH, 'H', 'H' },
+  { KEY_ROW_C_X(6), KEY_ROW_C_Y, KEY_WIDTH, 'J', 'J' },
+  { KEY_ROW_C_X(7), KEY_ROW_C_Y, KEY_WIDTH, 'K', 'K' },
+  { KEY_ROW_C_X(8), KEY_ROW_C_Y, KEY_WIDTH, 'L', 'L' },
+  { KEY_ROW_C_X(9), KEY_ROW_C_Y, KEY_WIDTH, ';', ';' },
+  { KEY_ROW_C_X(10), KEY_ROW_C_Y, KEY_WIDTH, '\'', '\'' },
+  { KEY_ROW_C_X(11), KEY_ROW_C_Y, KEY_WIDTH, '\\', '\\' },
 
-  { KEY_ROW_D_X(0), KEY_ROW_D_Y, KEY_WIDTH, 'Z' },
-  { KEY_ROW_D_X(1), KEY_ROW_D_Y, KEY_WIDTH, 'X' },
-  { KEY_ROW_D_X(2), KEY_ROW_D_Y, KEY_WIDTH, 'C' },
-  { KEY_ROW_D_X(3), KEY_ROW_D_Y, KEY_WIDTH, 'V' },
-  { KEY_ROW_D_X(4), KEY_ROW_D_Y, KEY_WIDTH, 'B' },
-  { KEY_ROW_D_X(5), KEY_ROW_D_Y, KEY_WIDTH, 'N' },
-  { KEY_ROW_D_X(6), KEY_ROW_D_Y, KEY_WIDTH, 'M' },
-  { KEY_ROW_D_X(7), KEY_ROW_D_Y, KEY_WIDTH, ',' },
-  { KEY_ROW_D_X(8), KEY_ROW_D_Y, KEY_WIDTH, '.' },
-  { KEY_ROW_D_X(9), KEY_ROW_D_Y, KEY_WIDTH, '/' },
+  { KEY_ROW_D_X(0), KEY_ROW_D_Y, KEY_WIDTH, 'Z', 'Z' },
+  { KEY_ROW_D_X(1), KEY_ROW_D_Y, KEY_WIDTH, 'X', 'X' },
+  { KEY_ROW_D_X(2), KEY_ROW_D_Y, KEY_WIDTH, 'C', 'C' },
+  { KEY_ROW_D_X(3), KEY_ROW_D_Y, KEY_WIDTH, 'V', 'V' },
+  { KEY_ROW_D_X(4), KEY_ROW_D_Y, KEY_WIDTH, 'B', 'B' },
+  { KEY_ROW_D_X(5), KEY_ROW_D_Y, KEY_WIDTH, 'N', 'N' },
+  { KEY_ROW_D_X(6), KEY_ROW_D_Y, KEY_WIDTH, 'M', 'M' },
+  { KEY_ROW_D_X(7), KEY_ROW_D_Y, KEY_WIDTH, ',', ',' },
+  { KEY_ROW_D_X(8), KEY_ROW_D_Y, KEY_WIDTH, '.', '.' },
+  { KEY_ROW_D_X(9), KEY_ROW_D_Y, KEY_WIDTH, '/', '/' },
+
+  {
+    1 + KEY_LSHIFT_WIDTH / 2,
+    KEY_ROW_D_Y,
+    KEY_LSHIFT_WIDTH,
+    KEYCODE_SHIFT,
+    '^'
+  },
+
+  {
+    ILI9341_WIDTH - 2 - KEY_RSHIFT_WIDTH / 2,
+    KEY_ROW_D_Y,
+    KEY_RSHIFT_WIDTH,
+    KEYCODE_SHIFT,
+    '^'
+  },
 
   { ILI9341_WIDTH / 2, KEY_ROW_E_Y, 100, ' ' }
 };
@@ -219,7 +240,7 @@ void _input_draw_key(struct touchKey *key, bool isActive) {
   tft.fillRect(ox + 1, oy + 1, key->width - 2, KEY_HEIGHT - 2, keyColor);
 
   tft.setCursor(key->cx - 3, key->cy - 4);
-  tft.print(key->code);
+  tft.print(key->label);
 }
 
 void _input_process_touch(int16_t xpos, int16_t ypos) {
