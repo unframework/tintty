@@ -59,7 +59,7 @@ bool touchActive = false; // touch status latch state
 #define KEY_LSHIFT_WIDTH (KEY_ROW_D_X(0) - KEY_WIDTH / 2 - KEY_GUTTER - 1)
 #define KEY_RSHIFT_WIDTH (ILI9341_WIDTH - KEY_ROW_D_X(9) - KEY_WIDTH / 2 - KEY_GUTTER - 1)
 
-#define KEYCODE_SHIFT 200
+#define KEYCODE_SHIFT -20
 
 int16_t touchKeyRowY[] = {
   KEY_ROW_A_Y,
@@ -73,70 +73,71 @@ const int touchKeyRowCount = 5;
 
 struct touchKey {
   int16_t cx, width;
-  char code, label;
+  char code, shiftCode, label;
 };
 
 struct touchKey touchKeyRowA[] = {
-  { KEY_ROW_A_X(0), KEY_WIDTH, '`', '`' },
-  { KEY_ROW_A_X(1), KEY_WIDTH, '1', '1' },
-  { KEY_ROW_A_X(2), KEY_WIDTH, '2', '2' },
-  { KEY_ROW_A_X(3), KEY_WIDTH, '3', '3' },
-  { KEY_ROW_A_X(4), KEY_WIDTH, '4', '4' },
-  { KEY_ROW_A_X(5), KEY_WIDTH, '5', '5' },
-  { KEY_ROW_A_X(6), KEY_WIDTH, '6', '6' },
-  { KEY_ROW_A_X(7), KEY_WIDTH, '7', '7' },
-  { KEY_ROW_A_X(8), KEY_WIDTH, '8', '8' },
-  { KEY_ROW_A_X(9), KEY_WIDTH, '9', '9' },
-  { KEY_ROW_A_X(10), KEY_WIDTH, '0', '0' },
-  { KEY_ROW_A_X(11), KEY_WIDTH, '-', '-' },
-  { KEY_ROW_A_X(12), KEY_WIDTH, '=', '=' }
+  { KEY_ROW_A_X(0), KEY_WIDTH, '`', '~', 0 },
+  { KEY_ROW_A_X(1), KEY_WIDTH, '1', '!', 0 },
+  { KEY_ROW_A_X(2), KEY_WIDTH, '2', '@', 0 },
+  { KEY_ROW_A_X(3), KEY_WIDTH, '3', '#', 0 },
+  { KEY_ROW_A_X(4), KEY_WIDTH, '4', '$', 0 },
+  { KEY_ROW_A_X(5), KEY_WIDTH, '5', '%', 0 },
+  { KEY_ROW_A_X(6), KEY_WIDTH, '6', '^', 0 },
+  { KEY_ROW_A_X(7), KEY_WIDTH, '7', '&', 0 },
+  { KEY_ROW_A_X(8), KEY_WIDTH, '8', '*', 0 },
+  { KEY_ROW_A_X(9), KEY_WIDTH, '9', '(', 0 },
+  { KEY_ROW_A_X(10), KEY_WIDTH, '0', ')', 0 },
+  { KEY_ROW_A_X(11), KEY_WIDTH, '-', '_', 0 },
+  { KEY_ROW_A_X(12), KEY_WIDTH, '=', '+', 0 }
 };
 
 struct touchKey touchKeyRowB[] = {
-  { KEY_ROW_B_X(0), KEY_WIDTH, 'Q', 'Q' },
-  { KEY_ROW_B_X(1), KEY_WIDTH, 'W', 'W' },
-  { KEY_ROW_B_X(2), KEY_WIDTH, 'E', 'E' },
-  { KEY_ROW_B_X(3), KEY_WIDTH, 'R', 'R' },
-  { KEY_ROW_B_X(4), KEY_WIDTH, 'T', 'T' },
-  { KEY_ROW_B_X(5), KEY_WIDTH, 'Y', 'Y' },
-  { KEY_ROW_B_X(6), KEY_WIDTH, 'U', 'U' },
-  { KEY_ROW_B_X(7), KEY_WIDTH, 'I', 'I' },
-  { KEY_ROW_B_X(8), KEY_WIDTH, 'O', 'O' },
-  { KEY_ROW_B_X(9), KEY_WIDTH, 'P', 'P' },
-  { KEY_ROW_B_X(10), KEY_WIDTH, '[', '[' },
-  { KEY_ROW_B_X(11), KEY_WIDTH, ']', ']' }
+  { KEY_ROW_B_X(0), KEY_WIDTH, 'q', 'Q', 0 },
+  { KEY_ROW_B_X(1), KEY_WIDTH, 'w', 'W', 0 },
+  { KEY_ROW_B_X(2), KEY_WIDTH, 'e', 'E', 0 },
+  { KEY_ROW_B_X(3), KEY_WIDTH, 'r', 'R', 0 },
+  { KEY_ROW_B_X(4), KEY_WIDTH, 't', 'T', 0 },
+  { KEY_ROW_B_X(5), KEY_WIDTH, 'y', 'Y', 0 },
+  { KEY_ROW_B_X(6), KEY_WIDTH, 'u', 'U', 0 },
+  { KEY_ROW_B_X(7), KEY_WIDTH, 'i', 'I', 0 },
+  { KEY_ROW_B_X(8), KEY_WIDTH, 'o', 'O', 0 },
+  { KEY_ROW_B_X(9), KEY_WIDTH, 'p', 'P', 0 },
+  { KEY_ROW_B_X(10), KEY_WIDTH, '[', '{', 0 },
+  { KEY_ROW_B_X(11), KEY_WIDTH, ']', '}', 0 }
 };
 
 struct touchKey touchKeyRowC[] = {
-  { KEY_ROW_C_X(0), KEY_WIDTH, 'A', 'A' },
-  { KEY_ROW_C_X(1), KEY_WIDTH, 'S', 'S' },
-  { KEY_ROW_C_X(2), KEY_WIDTH, 'D', 'D' },
-  { KEY_ROW_C_X(3), KEY_WIDTH, 'F', 'F' },
-  { KEY_ROW_C_X(4), KEY_WIDTH, 'G', 'G' },
-  { KEY_ROW_C_X(5), KEY_WIDTH, 'H', 'H' },
-  { KEY_ROW_C_X(6), KEY_WIDTH, 'J', 'J' },
-  { KEY_ROW_C_X(7), KEY_WIDTH, 'K', 'K' },
-  { KEY_ROW_C_X(8), KEY_WIDTH, 'L', 'L' },
-  { KEY_ROW_C_X(9), KEY_WIDTH, ';', ';' },
-  { KEY_ROW_C_X(10), KEY_WIDTH, '\'', '\'' },
-  { KEY_ROW_C_X(11), KEY_WIDTH, '\\', '\\' }
+  { KEY_ROW_C_X(0), KEY_WIDTH, 'a', 'A', 0 },
+  { KEY_ROW_C_X(1), KEY_WIDTH, 's', 'S', 0 },
+  { KEY_ROW_C_X(2), KEY_WIDTH, 'd', 'D', 0 },
+  { KEY_ROW_C_X(3), KEY_WIDTH, 'f', 'F', 0 },
+  { KEY_ROW_C_X(4), KEY_WIDTH, 'g', 'G', 0 },
+  { KEY_ROW_C_X(5), KEY_WIDTH, 'h', 'H', 0 },
+  { KEY_ROW_C_X(6), KEY_WIDTH, 'j', 'J', 0 },
+  { KEY_ROW_C_X(7), KEY_WIDTH, 'k', 'K', 0 },
+  { KEY_ROW_C_X(8), KEY_WIDTH, 'l', 'L', 0 },
+  { KEY_ROW_C_X(9), KEY_WIDTH, ';', ':', 0 },
+  { KEY_ROW_C_X(10), KEY_WIDTH, '\'', '"', 0 },
+  { KEY_ROW_C_X(11), KEY_WIDTH, '\\', '|', 0 }
 };
 
 struct touchKey touchKeyRowD[] = {
-  { KEY_ROW_D_X(0), KEY_WIDTH, 'Z', 'Z' },
-  { KEY_ROW_D_X(1), KEY_WIDTH, 'X', 'X' },
-  { KEY_ROW_D_X(2), KEY_WIDTH, 'C', 'C' },
-  { KEY_ROW_D_X(3), KEY_WIDTH, 'V', 'V' },
-  { KEY_ROW_D_X(4), KEY_WIDTH, 'B', 'B' },
-  { KEY_ROW_D_X(5), KEY_WIDTH, 'N', 'N' },
-  { KEY_ROW_D_X(6), KEY_WIDTH, 'M', 'M' },
-  { KEY_ROW_D_X(7), KEY_WIDTH, ',', ',' },
-  { KEY_ROW_D_X(8), KEY_WIDTH, '.', '.' },
-  { KEY_ROW_D_X(9), KEY_WIDTH, '/', '/' },
+  { KEY_ROW_D_X(0), KEY_WIDTH, 'z', 'Z', 0 },
+  { KEY_ROW_D_X(1), KEY_WIDTH, 'x', 'X', 0 },
+  { KEY_ROW_D_X(2), KEY_WIDTH, 'c', 'C', 0 },
+  { KEY_ROW_D_X(3), KEY_WIDTH, 'v', 'V', 0 },
+  { KEY_ROW_D_X(4), KEY_WIDTH, 'b', 'B', 0 },
+  { KEY_ROW_D_X(5), KEY_WIDTH, 'n', 'N', 0 },
+  { KEY_ROW_D_X(6), KEY_WIDTH, 'm', 'M', 0 },
+  { KEY_ROW_D_X(7), KEY_WIDTH, ',', '<', 0 },
+  { KEY_ROW_D_X(8), KEY_WIDTH, '.', '>', 0 },
+  { KEY_ROW_D_X(9), KEY_WIDTH, '/', '?', 0 },
 
   {
     1 + KEY_LSHIFT_WIDTH / 2,
     KEY_LSHIFT_WIDTH,
+    KEYCODE_SHIFT,
     KEYCODE_SHIFT,
     '^'
   },
@@ -145,12 +146,13 @@ struct touchKey touchKeyRowD[] = {
     ILI9341_WIDTH - 2 - KEY_RSHIFT_WIDTH / 2,
     KEY_RSHIFT_WIDTH,
     KEYCODE_SHIFT,
+    KEYCODE_SHIFT,
     '^'
   }
 };
 
 struct touchKey touchKeyRowE[] = {
-  { ILI9341_WIDTH / 2, 100, ' ' }
+  { ILI9341_WIDTH / 2, 100, ' ', ' ', ' ' }
 };
 
 struct touchKey *touchKeyRowContents[] = {
@@ -167,6 +169,7 @@ int touchKeyRowContentsCount[] = {
 
 int activeRow = -1;
 struct touchKey *activeKey = NULL;
+bool shiftIsActive = false;
 
 struct tintty_display ili9341_display = {
   ILI9341_WIDTH,
@@ -252,8 +255,9 @@ void setup() {
 void loop() {
 }
 
-void _input_draw_key(int keyRow, struct touchKey *key, bool isActive) {
+void _input_draw_key(int keyRow, struct touchKey *key) {
   const int16_t rowCY = touchKeyRowY[keyRow];
+  const bool isActive = key == activeKey;
 
   uint16_t keyColor = isActive ? 0xFFFF : 0;
   uint16_t borderColor = isActive ? 0xFFFF : tft.color565(0x80, 0x80, 0x80);
@@ -271,7 +275,21 @@ void _input_draw_key(int keyRow, struct touchKey *key, bool isActive) {
   tft.fillRect(ox + 1, oy + 1, key->width - 2, KEY_HEIGHT - 2, keyColor);
 
   tft.setCursor(key->cx - 3, rowCY - 4);
-  tft.print(key->label);
+  tft.print(
+    key->label == 0
+      ? (shiftIsActive ? key->shiftCode : key->code)
+      : key->label
+  );
+}
+
+void _input_draw_all_keys() {
+  for (int i = 0; i < touchKeyRowCount; i++) {
+    const int keyCount = touchKeyRowContentsCount[i];
+
+    for (int j = 0; j < keyCount; j++) {
+      _input_draw_key(i, &touchKeyRowContents[i][j]);
+    }
+  }
 }
 
 void _input_process_touch(int16_t xpos, int16_t ypos) {
@@ -305,20 +323,35 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
   }
 
   if (activeKey) {
-    _input_draw_key(activeRow, activeKey, true);
+    if (activeKey->code == KEYCODE_SHIFT) {
+      shiftIsActive = !shiftIsActive;
 
-    // @todo this
-    test_buffer_cursor = 0;
-    test_buffer[0] = activeKey->code;
-    test_buffer[1] = 0;
+      _input_draw_all_keys();
+    } else {
+      _input_draw_key(activeRow, activeKey);
+
+      // @todo this
+      test_buffer_cursor = 0;
+      test_buffer[0] = shiftIsActive ? activeKey->shiftCode : activeKey->code;
+      test_buffer[1] = 0;
+    }
   }
 }
 
 void _input_process_release() {
-  _input_draw_key(activeRow, activeKey, false);
+  const int releasedKeyRow = activeRow;
+  const struct touchKey *releasedKey = activeKey;
 
   activeRow = -1;
   activeKey = NULL;
+
+  if (shiftIsActive && releasedKey->code != KEYCODE_SHIFT) {
+    shiftIsActive = false;
+
+    _input_draw_all_keys();
+  } else {
+    _input_draw_key(releasedKeyRow, releasedKey);
+  }
 }
 
 void input_init() {
@@ -328,13 +361,7 @@ void input_init() {
 
   tft.setTextSize(1);
 
-  for (int i = 0; i < touchKeyRowCount; i++) {
-    const int keyCount = touchKeyRowContentsCount[i];
-
-    for (int j = 0; j < keyCount; j++) {
-      _input_draw_key(i, &touchKeyRowContents[i][j], false);
-    }
-  }
+  _input_draw_all_keys();
 }
 
 void input_idle() {
