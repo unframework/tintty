@@ -51,17 +51,10 @@ bool touchActive = false; // touch status latch state
 #define KEY_ROW_D_Y (KEY_ROW_C_Y + KEY_GUTTER + KEY_HEIGHT)
 #define KEY_ROW_E_Y (KEY_ROW_D_Y + KEY_GUTTER + KEY_HEIGHT)
 
-#define KEY_ROW_A_X(index) (1 + (KEY_WIDTH + KEY_GUTTER) * index)
-#define KEY_ROW_B_X(index) (9 + (KEY_WIDTH + KEY_GUTTER) * index)
-#define KEY_ROW_C_X(index) (22 + (KEY_WIDTH + KEY_GUTTER) * index)
-#define KEY_ROW_D_X(index) (30 + (KEY_WIDTH + KEY_GUTTER) * index)
-
-#define KEY_LSHIFT_WIDTH (KEY_ROW_D_X(0) - KEY_GUTTER - 1)
-#define KEY_RSHIFT_WIDTH (ILI9341_WIDTH - KEY_ROW_D_X(9) - KEY_WIDTH - KEY_GUTTER - 1)
-
-#define KEY_BACKSPACE_WIDTH (ILI9341_WIDTH - KEY_ROW_A_X(12) - KEY_WIDTH - KEY_GUTTER - 1)
-#define KEY_TAB_WIDTH (KEY_ROW_C_X(0) - KEY_GUTTER - 1)
-#define KEY_ENTER_WIDTH (ILI9341_WIDTH - KEY_ROW_B_X(11) - KEY_WIDTH - KEY_GUTTER - 1)
+#define KEY_ROW_A_X(index) (0 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_B_X(index) (20 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_C_X(index) (24 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_D_X(index) (32 + (KEY_WIDTH + KEY_GUTTER) * index)
 
 #define KEYCODE_SHIFT -20
 
@@ -81,7 +74,7 @@ struct touchKey {
 };
 
 struct touchKey touchKeyRowA[] = {
-  { KEY_ROW_A_X(0), KEY_WIDTH, '`', '~', 0 },
+  { 1, KEY_ROW_A_X(1) - 1 - KEY_GUTTER, '`', '~', 0 }, // shrunk width
   { KEY_ROW_A_X(1), KEY_WIDTH, '1', '!', 0 },
   { KEY_ROW_A_X(2), KEY_WIDTH, '2', '@', 0 },
   { KEY_ROW_A_X(3), KEY_WIDTH, '3', '#', 0 },
@@ -94,10 +87,12 @@ struct touchKey touchKeyRowA[] = {
   { KEY_ROW_A_X(10), KEY_WIDTH, '0', ')', 0 },
   { KEY_ROW_A_X(11), KEY_WIDTH, '-', '_', 0 },
   { KEY_ROW_A_X(12), KEY_WIDTH, '=', '+', 0 },
-  { ILI9341_WIDTH - 1 - KEY_BACKSPACE_WIDTH, KEY_BACKSPACE_WIDTH, 8, 8, 27 }
+  { KEY_ROW_A_X(13), ILI9341_WIDTH - 1 - KEY_ROW_A_X(13), 8, 8, 27 }
 };
 
 struct touchKey touchKeyRowB[] = {
+  { 1, (KEY_ROW_B_X(0) - KEY_GUTTER - 1), 9, 9, 26 },
+
   { KEY_ROW_B_X(0), KEY_WIDTH, 'q', 'Q', 0 },
   { KEY_ROW_B_X(1), KEY_WIDTH, 'w', 'W', 0 },
   { KEY_ROW_B_X(2), KEY_WIDTH, 'e', 'E', 0 },
@@ -110,13 +105,10 @@ struct touchKey touchKeyRowB[] = {
   { KEY_ROW_B_X(9), KEY_WIDTH, 'p', 'P', 0 },
   { KEY_ROW_B_X(10), KEY_WIDTH, '[', '{', 0 },
   { KEY_ROW_B_X(11), KEY_WIDTH, ']', '}', 0 },
-
-  { ILI9341_WIDTH - 1 - KEY_ENTER_WIDTH, KEY_ENTER_WIDTH, 10, 10, 16 }
+  { KEY_ROW_B_X(12), ILI9341_WIDTH - 1 - KEY_ROW_B_X(12), '\\', '|', 0 }
 };
 
 struct touchKey touchKeyRowC[] = {
-  { 1, KEY_TAB_WIDTH, 9, 9, 26 },
-
   { KEY_ROW_C_X(0), KEY_WIDTH, 'a', 'A', 0 },
   { KEY_ROW_C_X(1), KEY_WIDTH, 's', 'S', 0 },
   { KEY_ROW_C_X(2), KEY_WIDTH, 'd', 'D', 0 },
@@ -128,7 +120,8 @@ struct touchKey touchKeyRowC[] = {
   { KEY_ROW_C_X(8), KEY_WIDTH, 'l', 'L', 0 },
   { KEY_ROW_C_X(9), KEY_WIDTH, ';', ':', 0 },
   { KEY_ROW_C_X(10), KEY_WIDTH, '\'', '"', 0 },
-  { KEY_ROW_C_X(11), KEY_WIDTH, '\\', '|', 0 }
+
+  { KEY_ROW_C_X(11), ILI9341_WIDTH - 1 - KEY_ROW_C_X(11), 10, 10, 16 }
 };
 
 struct touchKey touchKeyRowD[] = {
@@ -145,15 +138,15 @@ struct touchKey touchKeyRowD[] = {
 
   {
     1,
-    KEY_LSHIFT_WIDTH,
+    (KEY_ROW_D_X(0) - KEY_GUTTER - 1),
     KEYCODE_SHIFT,
     KEYCODE_SHIFT,
     24
   },
 
   {
-    ILI9341_WIDTH - 1 - KEY_RSHIFT_WIDTH,
-    KEY_RSHIFT_WIDTH,
+    KEY_ROW_D_X(10),
+    ILI9341_WIDTH - 1 - KEY_ROW_D_X(10),
     KEYCODE_SHIFT,
     KEYCODE_SHIFT,
     24
@@ -173,7 +166,7 @@ struct touchKey *touchKeyRowContents[] = {
 };
 
 int touchKeyRowContentsCount[] = {
-  14, 13, 13, 12, 1
+  14, 14, 12, 12, 1
 };
 
 int activeRow = -1;
