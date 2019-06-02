@@ -109,11 +109,11 @@ struct touchKey touchKeyRowB[] = {
   { KEY_ROW_B_X(10), KEY_WIDTH, '[', '{', 0 },
   { KEY_ROW_B_X(11), KEY_WIDTH, ']', '}', 0 },
 
-  { ILI9341_WIDTH - 1 - KEY_ENTER_WIDTH, KEY_ENTER_WIDTH, 16, 16, 10 }
+  { ILI9341_WIDTH - 1 - KEY_ENTER_WIDTH, KEY_ENTER_WIDTH, 10, 10, 16 }
 };
 
 struct touchKey touchKeyRowC[] = {
-  { 1, KEY_TAB_WIDTH, 26, 26, 9 },
+  { 1, KEY_TAB_WIDTH, 9, 9, 26 },
 
   { KEY_ROW_C_X(0), KEY_WIDTH, 'a', 'A', 0 },
   { KEY_ROW_C_X(1), KEY_WIDTH, 's', 'S', 0 },
