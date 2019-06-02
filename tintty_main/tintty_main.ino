@@ -45,22 +45,22 @@ bool touchActive = false; // touch status latch state
 #define KEY_HEIGHT 16
 #define KEY_GUTTER 1
 
-#define KEY_ROW_A_Y (ILI9341_HEIGHT - KEYBOARD_HEIGHT + KEYBOARD_GUTTER + KEY_HEIGHT / 2)
+#define KEY_ROW_A_Y (ILI9341_HEIGHT - KEYBOARD_HEIGHT + KEYBOARD_GUTTER)
 #define KEY_ROW_B_Y (KEY_ROW_A_Y + KEY_GUTTER + KEY_HEIGHT)
 #define KEY_ROW_C_Y (KEY_ROW_B_Y + KEY_GUTTER + KEY_HEIGHT)
 #define KEY_ROW_D_Y (KEY_ROW_C_Y + KEY_GUTTER + KEY_HEIGHT)
 #define KEY_ROW_E_Y (KEY_ROW_D_Y + KEY_GUTTER + KEY_HEIGHT)
 
-#define KEY_ROW_A_X(index) (9 + (KEY_WIDTH + KEY_GUTTER) * index)
-#define KEY_ROW_B_X(index) (17 + (KEY_WIDTH + KEY_GUTTER) * index)
-#define KEY_ROW_C_X(index) (30 + (KEY_WIDTH + KEY_GUTTER) * index)
-#define KEY_ROW_D_X(index) (38 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_A_X(index) (1 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_B_X(index) (9 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_C_X(index) (22 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define KEY_ROW_D_X(index) (30 + (KEY_WIDTH + KEY_GUTTER) * index)
 
-#define KEY_LSHIFT_WIDTH (KEY_ROW_D_X(0) - KEY_WIDTH / 2 - KEY_GUTTER - 1)
-#define KEY_RSHIFT_WIDTH (ILI9341_WIDTH - KEY_ROW_D_X(9) - KEY_WIDTH / 2 - KEY_GUTTER - 1)
+#define KEY_LSHIFT_WIDTH (KEY_ROW_D_X(0) - KEY_GUTTER - 1)
+#define KEY_RSHIFT_WIDTH (ILI9341_WIDTH - KEY_ROW_D_X(9) - KEY_WIDTH - KEY_GUTTER - 1)
 
-#define KEY_TAB_WIDTH (KEY_ROW_C_X(0) - KEY_WIDTH / 2 - KEY_GUTTER - 1)
-#define KEY_ENTER_WIDTH (ILI9341_WIDTH - KEY_ROW_B_X(11) - KEY_WIDTH / 2 - KEY_GUTTER - 1)
+#define KEY_TAB_WIDTH (KEY_ROW_C_X(0) - KEY_GUTTER - 1)
+#define KEY_ENTER_WIDTH (ILI9341_WIDTH - KEY_ROW_B_X(11) - KEY_WIDTH - KEY_GUTTER - 1)
 
 #define KEYCODE_SHIFT -20
 
@@ -75,7 +75,7 @@ int16_t touchKeyRowY[] = {
 const int touchKeyRowCount = 5;
 
 struct touchKey {
-  int16_t cx, width;
+  int16_t x, width;
   char code, shiftCode, label;
 };
 
@@ -109,11 +109,11 @@ struct touchKey touchKeyRowB[] = {
   { KEY_ROW_B_X(10), KEY_WIDTH, '[', '{', 0 },
   { KEY_ROW_B_X(11), KEY_WIDTH, ']', '}', 0 },
 
-  { ILI9341_WIDTH - 2 - KEY_ENTER_WIDTH / 2, KEY_ENTER_WIDTH, 16, 16, 10 }
+  { ILI9341_WIDTH - 1 - KEY_ENTER_WIDTH, KEY_ENTER_WIDTH, 16, 16, 10 }
 };
 
 struct touchKey touchKeyRowC[] = {
-  { 1 + KEY_TAB_WIDTH / 2, KEY_TAB_WIDTH, 26, 26, 9 },
+  { 1, KEY_TAB_WIDTH, 26, 26, 9 },
 
   { KEY_ROW_C_X(0), KEY_WIDTH, 'a', 'A', 0 },
   { KEY_ROW_C_X(1), KEY_WIDTH, 's', 'S', 0 },
@@ -142,7 +142,7 @@ struct touchKey touchKeyRowD[] = {
   { KEY_ROW_D_X(9), KEY_WIDTH, '/', '?', 0 },
 
   {
-    1 + KEY_LSHIFT_WIDTH / 2,
+    1,
     KEY_LSHIFT_WIDTH,
     KEYCODE_SHIFT,
     KEYCODE_SHIFT,
@@ -150,7 +150,7 @@ struct touchKey touchKeyRowD[] = {
   },
 
   {
-    ILI9341_WIDTH - 2 - KEY_RSHIFT_WIDTH / 2,
+    ILI9341_WIDTH - 1 - KEY_RSHIFT_WIDTH,
     KEY_RSHIFT_WIDTH,
     KEYCODE_SHIFT,
     KEYCODE_SHIFT,
@@ -159,7 +159,7 @@ struct touchKey touchKeyRowD[] = {
 };
 
 struct touchKey touchKeyRowE[] = {
-  { ILI9341_WIDTH / 2, 100, ' ', ' ', ' ' }
+  { (ILI9341_WIDTH - 100) / 2, 100, ' ', ' ', ' ' }
 };
 
 struct touchKey *touchKeyRowContents[] = {
@@ -272,8 +272,8 @@ void _input_draw_key(int keyRow, struct touchKey *key) {
 
   tft.setTextColor(textColor);
 
-  const int16_t ox = key->cx - key->width / 2;
-  const int16_t oy = rowCY - KEY_HEIGHT / 2;
+  const int16_t ox = key->x;
+  const int16_t oy = rowCY;
 
   tft.drawFastHLine(ox, oy, key->width, borderColor);
   tft.drawFastHLine(ox, oy + KEY_HEIGHT - 1, key->width, borderColor);
@@ -281,7 +281,7 @@ void _input_draw_key(int keyRow, struct touchKey *key) {
   tft.drawFastVLine(ox + key->width - 1, oy, KEY_HEIGHT, borderColor);
   tft.fillRect(ox + 1, oy + 1, key->width - 2, KEY_HEIGHT - 2, keyColor);
 
-  tft.setCursor(key->cx - 3, rowCY - 4);
+  tft.setCursor(key->x + (key->width / 2) - 3, rowCY + (KEY_HEIGHT / 2) - 4);
   tft.print(
     key->label == 0
       ? (shiftIsActive ? key->shiftCode : key->code)
@@ -305,7 +305,7 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
   for (int i = 0; i < touchKeyRowCount; i++) {
     int rowCY = touchKeyRowY[i];
 
-    if (ypos >= rowCY - KEY_HEIGHT / 2 && ypos <= rowCY + KEY_HEIGHT / 2) {
+    if (ypos >= rowCY && ypos <= rowCY + KEY_HEIGHT) {
       activeRow = i;
       break;
     }
@@ -320,7 +320,7 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
   for (int i = 0; i < keyCount; i++) {
     const struct touchKey *key = &touchKeyRowContents[activeRow][i];
 
-    if (xpos < key->cx - key->width / 2 || xpos > key->cx + key->width / 2) {
+    if (xpos < key->x || xpos > key->x + key->width) {
       continue;
     }
 
