@@ -35,6 +35,7 @@ bool touchActive = false; // touch status latch state
 #define KEY_ROW_D_X(index) (32 + (KEY_WIDTH + KEY_GUTTER) * index)
 
 #define KEYCODE_SHIFT -20
+#define KEYCODE_CAPS -21
 
 const int touchKeyRowCount = 5;
 
@@ -92,8 +93,16 @@ struct touchKeyRow {
     },
     {
         KEY_ROW_A_Y + (KEY_GUTTER + KEY_HEIGHT) * 2,
-        12,
+        13,
         {
+            {
+                1,
+                (KEY_ROW_C_X(0) - KEY_GUTTER - 1),
+                KEYCODE_CAPS,
+                KEYCODE_CAPS,
+                18
+            },
+
             { KEY_ROW_C_X(0), KEY_WIDTH, 'a', 'A', 0 },
             { KEY_ROW_C_X(1), KEY_WIDTH, 's', 'S', 0 },
             { KEY_ROW_C_X(2), KEY_WIDTH, 'd', 'D', 0 },
@@ -153,6 +162,18 @@ struct touchKeyRow {
 struct touchKeyRow *activeRow = NULL;
 struct touchKey *activeKey = NULL;
 bool shiftIsActive = false;
+bool shiftIsSticky = false;
+
+void _input_set_mode(bool shift, bool shiftSticky) {
+    // reset if current mode already matches
+    if (shiftIsActive == shift && shiftIsSticky == shiftSticky) {
+        shiftIsActive = false;
+        shiftIsSticky = false;
+    } else {
+        shiftIsActive = shift;
+        shiftIsSticky = shiftSticky;
+    }
+}
 
 void _input_draw_key(struct touchKeyRow *keyRow, struct touchKey *key) {
     const int16_t rowCY = keyRow->y;
@@ -224,15 +245,25 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
 
     if (activeKey) {
         if (activeKey->code == KEYCODE_SHIFT) {
-            shiftIsActive = !shiftIsActive;
-
+            _input_set_mode(true, false);
+            _input_draw_all_keys();
+        } else if (activeKey->code == KEYCODE_CAPS) {
+            _input_set_mode(true, true);
             _input_draw_all_keys();
         } else {
             _input_draw_key(activeRow, activeKey);
 
-            const char charCode = shiftIsActive ? activeKey->shiftCode : activeKey->code;
+            if (shiftIsActive) {
+                Serial.print(activeKey->shiftCode);
 
-            Serial.print(charCode);
+                // clear back to lowercase unless caps-lock
+                if (!shiftIsSticky) {
+                    shiftIsActive = false;
+                    _input_draw_all_keys();
+                }
+            } else {
+                Serial.print(activeKey->code);
+            }
         }
     }
 }
@@ -244,13 +275,7 @@ void _input_process_release() {
     activeRow = NULL;
     activeKey = NULL;
 
-    if (shiftIsActive && releasedKey->code != KEYCODE_SHIFT) {
-        shiftIsActive = false;
-
-        _input_draw_all_keys();
-    } else {
-        _input_draw_key(releasedKeyRow, releasedKey);
-    }
+    _input_draw_key(releasedKeyRow, releasedKey);
 }
 
 void input_init() {
