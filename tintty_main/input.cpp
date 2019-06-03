@@ -2,6 +2,7 @@
 #include <TouchScreen.h>
 #include <Adafruit_GFX.h>
 
+#include "tintty.h"
 #include "input.h"
 
 // calibrated settings from TouchScreen_Calibr_native
@@ -309,7 +310,7 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
                 _input_draw_all_keys();
             } else if (activeKey->code >= KEYCODE_ARROW_START && activeKey->code < KEYCODE_ARROW_START + 4) {
                 Serial.print((char)27); // Esc
-                Serial.print('[');
+                Serial.print(tintty_cursor_key_mode_application ? 'O' : '['); // different code depending on terminal state
                 Serial.print((char)(activeKey->code - KEYCODE_ARROW_START + 'A'));
             } else {
                 Serial.print(activeKey->code);
