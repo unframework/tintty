@@ -3,7 +3,6 @@
 #include <MCUFRIEND_kbv.h>
 
 extern MCUFRIEND_kbv tft;
-extern void test_send_char(char charCode);
 
 // @todo move?
 #define ILI9341_WIDTH 240

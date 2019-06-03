@@ -7,7 +7,6 @@
  */
 
 #include <SPI.h>
-// #include <SoftwareSerial.h>
 
 #include <Adafruit_GFX.h>
 #include <MCUFRIEND_kbv.h>
@@ -38,23 +37,12 @@ struct tintty_display ili9341_display = {
   }
 };
 
-// input serial forwarder RX, TX (TX should not be used anyway)
-// @todo separate out to be configuration-specific and replace with touchscreen
-// SoftwareSerial inputSerial(9, 10);
-
 // buffer to test various input sequences
 char *test_buffer = "-- \e[1mTinTTY\e[m --\r\n";
 uint8_t test_buffer_cursor = 0;
 
-void test_send_char(char charCode) {
-  test_buffer_cursor = 0;
-  test_buffer[0] = charCode;
-  test_buffer[1] = 0;
-}
-
 void setup() {
   Serial.begin(9600); // normal baud-rate
-  // inputSerial.begin(9600); // normal baud-rate
 
   uint16_t tftID = tft.readID();
   tft.begin(tftID);
@@ -63,42 +51,39 @@ void setup() {
 
   tintty_run(
     [=](){
-      // first peek from the test buffer
-      while (!test_buffer[test_buffer_cursor]) {
+      // peek idle loop
+      while (true) {
+        // first peek from the test buffer
+        if (test_buffer[test_buffer_cursor]) {
+          return test_buffer[test_buffer_cursor];
+        }
+
+        // fall back to normal blocking serial input
+        if (Serial.available() > 0) {
+          return (char)Serial.peek();
+        }
+
+        // idle logic only after peeks failed
         tintty_idle(&ili9341_display);
         input_idle();
       }
-
-      return test_buffer[test_buffer_cursor];
-
-      // // fall back to normal blocking serial input
-      // while (Serial.available() < 1) {
-      //   tintty_idle(&ili9341_display);
-      //   input_idle();
-      // }
-
-      // return (char)Serial.peek();
     },
     [=](){
-      // process at least one idle loop to allow input to happen
-      tintty_idle(&ili9341_display);
-      input_idle();
-
-      // first read from the test buffer
-      while (!test_buffer[test_buffer_cursor]) {
+      while(true) {
+        // process at least one idle loop first to allow input to happen
         tintty_idle(&ili9341_display);
         input_idle();
+
+        // first read from the test buffer
+        if (test_buffer[test_buffer_cursor]) {
+          return test_buffer[test_buffer_cursor++];
+        }
+
+        // fall back to normal blocking serial input
+        if (Serial.available() > 0) {
+          return (char)Serial.read();
+        }
       }
-
-      return test_buffer[test_buffer_cursor++];
-
-      // // fall back to normal blocking serial input
-      // while (Serial.available() < 1) {
-      //   tintty_idle(&ili9341_display);
-      //   input_idle();
-      // }
-
-      // return (char)Serial.read();
     },
     [=](char ch){ Serial.print(ch); },
     &ili9341_display

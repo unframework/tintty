@@ -232,7 +232,7 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
 
             const char charCode = shiftIsActive ? activeKey->shiftCode : activeKey->code;
 
-            test_send_char(charCode);
+            Serial.print(charCode);
         }
     }
 }
