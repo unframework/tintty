@@ -33,10 +33,12 @@ bool touchActive = false; // touch status latch state
 #define KEY_ROW_B_X(index) (20 + (KEY_WIDTH + KEY_GUTTER) * index)
 #define KEY_ROW_C_X(index) (24 + (KEY_WIDTH + KEY_GUTTER) * index)
 #define KEY_ROW_D_X(index) (32 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define ARROW_KEY_X(index) (ILI9341_WIDTH - (KEY_WIDTH + KEY_GUTTER) * (4 - index))
 
 #define KEYCODE_SHIFT -20
 #define KEYCODE_CAPS -21
 #define KEYCODE_CONTROL -22
+#define KEYCODE_ARROW_START -30 // from -30 to -27
 
 const int touchKeyRowCount = 5;
 
@@ -153,7 +155,7 @@ struct touchKeyRow {
     },
     {
         KEY_ROW_A_Y + (KEY_GUTTER + KEY_HEIGHT) * 4,
-        2,
+        6,
         {
             {
                 1,
@@ -163,7 +165,12 @@ struct touchKeyRow {
                 'C'
             },
 
-            { (ILI9341_WIDTH - 100) / 2, 100, ' ', ' ', ' ' }
+            { (ILI9341_WIDTH - 100) / 2, 100, ' ', ' ', ' ' },
+
+            { ARROW_KEY_X(0), KEY_WIDTH, KEYCODE_ARROW_START + 3, KEYCODE_ARROW_START + 3, 17 },
+            { ARROW_KEY_X(1), KEY_WIDTH, KEYCODE_ARROW_START, KEYCODE_ARROW_START, 30 },
+            { ARROW_KEY_X(2), KEY_WIDTH, KEYCODE_ARROW_START + 1, KEYCODE_ARROW_START + 1, 31 },
+            { ARROW_KEY_X(3), KEY_WIDTH, KEYCODE_ARROW_START + 2, KEYCODE_ARROW_START + 2, 16 }
         }
     }
 };
@@ -300,6 +307,10 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
                 // always clear back to normal
                 _input_set_mode(false, false, false);
                 _input_draw_all_keys();
+            } else if (activeKey->code >= KEYCODE_ARROW_START && activeKey->code < KEYCODE_ARROW_START + 4) {
+                Serial.print(27); // Esc
+                Serial.print('[');
+                Serial.print(activeKey->code - KEYCODE_ARROW_START + 'A');
             } else {
                 Serial.print(activeKey->code);
             }
