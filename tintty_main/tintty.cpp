@@ -22,6 +22,10 @@
 #define CHAR_WIDTH TINTTY_CHAR_WIDTH
 #define CHAR_HEIGHT TINTTY_CHAR_HEIGHT
 
+// exported variable for input logic
+// @todo refactor
+bool tintty_cursor_key_mode_application;
+
 const uint16_t ANSI_COLORS[] = {
     TFT_BLACK,
     TFT_RED,
@@ -56,6 +60,9 @@ struct tintty_state {
     uint16_t bg_ansi_color, fg_ansi_color;
     bool bold;
 
+    // cursor mode
+    bool cursor_key_mode_application;
+
     // saved DEC cursor info (in screen coords)
     int16_t dec_saved_col, dec_saved_row, dec_saved_bg, dec_saved_fg;
     uint8_t dec_saved_g4bank;
@@ -83,6 +90,9 @@ struct tintty_rendered {
 
 // @todo support negative cursor_row
 void _render(tintty_display *display) {
+    // expose the cursor key mode state
+    tintty_cursor_key_mode_application = state.cursor_key_mode_application;
+
     // if scrolling, prepare the "recycled" screen area
     if (state.top_row != rendered.top_row) {
         // clear the new piece of screen to be recycled as blank space
@@ -419,6 +429,11 @@ void _exec_escape_question_command(
     const bool mode_on = (read_char() != 'l');
 
     switch (mode) {
+        case 1:
+            // cursor key mode (normal/application)
+            state.cursor_key_mode_application = mode_on;
+            break;
+
         case 7:
             // auto wrap mode
             state.no_wrap = !mode_on;
@@ -800,6 +815,8 @@ void tintty_run(
     state.bg_ansi_color = 0;
     state.fg_ansi_color = 7;
     state.bold = false;
+
+    state.cursor_key_mode_application = false;
 
     state.dec_saved_col = 0;
     state.dec_saved_row = 0;

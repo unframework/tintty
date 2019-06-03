@@ -4,6 +4,8 @@
 #define TINTTY_CHAR_WIDTH 4
 #define TINTTY_CHAR_HEIGHT 6
 
+extern bool tintty_cursor_key_mode_application;
+
 /**
  * Renderer callbacks.
  */

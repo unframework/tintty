@@ -2,6 +2,7 @@
 #include <TouchScreen.h>
 #include <Adafruit_GFX.h>
 
+#include "tintty.h"
 #include "input.h"
 
 // calibrated settings from TouchScreen_Calibr_native
@@ -33,8 +34,12 @@ bool touchActive = false; // touch status latch state
 #define KEY_ROW_B_X(index) (20 + (KEY_WIDTH + KEY_GUTTER) * index)
 #define KEY_ROW_C_X(index) (24 + (KEY_WIDTH + KEY_GUTTER) * index)
 #define KEY_ROW_D_X(index) (32 + (KEY_WIDTH + KEY_GUTTER) * index)
+#define ARROW_KEY_X(index) (ILI9341_WIDTH - (KEY_WIDTH + KEY_GUTTER) * (4 - index))
 
 #define KEYCODE_SHIFT -20
+#define KEYCODE_CAPS -21
+#define KEYCODE_CONTROL -22
+#define KEYCODE_ARROW_START -30 // from -30 to -27
 
 const int touchKeyRowCount = 5;
 
@@ -92,8 +97,16 @@ struct touchKeyRow {
     },
     {
         KEY_ROW_A_Y + (KEY_GUTTER + KEY_HEIGHT) * 2,
-        12,
+        13,
         {
+            {
+                1,
+                (KEY_ROW_C_X(0) - KEY_GUTTER - 1),
+                KEYCODE_CAPS,
+                KEYCODE_CAPS,
+                18
+            },
+
             { KEY_ROW_C_X(0), KEY_WIDTH, 'a', 'A', 0 },
             { KEY_ROW_C_X(1), KEY_WIDTH, 's', 'S', 0 },
             { KEY_ROW_C_X(2), KEY_WIDTH, 'd', 'D', 0 },
@@ -143,9 +156,22 @@ struct touchKeyRow {
     },
     {
         KEY_ROW_A_Y + (KEY_GUTTER + KEY_HEIGHT) * 4,
-        1,
+        6,
         {
-            { (ILI9341_WIDTH - 100) / 2, 100, ' ', ' ', ' ' }
+            {
+                1,
+                22,
+                KEYCODE_CONTROL,
+                KEYCODE_CONTROL,
+                'C'
+            },
+
+            { (ILI9341_WIDTH - 100) / 2, 100, ' ', ' ', ' ' },
+
+            { ARROW_KEY_X(0), KEY_WIDTH, KEYCODE_ARROW_START + 3, KEYCODE_ARROW_START + 3, 17 },
+            { ARROW_KEY_X(1), KEY_WIDTH, KEYCODE_ARROW_START, KEYCODE_ARROW_START, 30 },
+            { ARROW_KEY_X(2), KEY_WIDTH, KEYCODE_ARROW_START + 1, KEYCODE_ARROW_START + 1, 31 },
+            { ARROW_KEY_X(3), KEY_WIDTH, KEYCODE_ARROW_START + 2, KEYCODE_ARROW_START + 2, 16 }
         }
     }
 };
@@ -153,10 +179,36 @@ struct touchKeyRow {
 struct touchKeyRow *activeRow = NULL;
 struct touchKey *activeKey = NULL;
 bool shiftIsActive = false;
+bool shiftIsSticky = false;
+bool controlIsActive = false;
+
+void _input_set_mode(bool shift, bool shiftSticky, bool control) {
+    // reset if current mode already matches
+    if (
+        shiftIsActive == shift &&
+        shiftIsSticky == shiftSticky &&
+        controlIsActive == control
+    ) {
+        shiftIsActive = false;
+        shiftIsSticky = false;
+        controlIsActive = false;
+    } else {
+        shiftIsActive = shift;
+        shiftIsSticky = shiftSticky;
+        controlIsActive = control;
+    }
+}
 
 void _input_draw_key(struct touchKeyRow *keyRow, struct touchKey *key) {
     const int16_t rowCY = keyRow->y;
-    const bool isActive = key == activeKey;
+    const bool isActive = (
+        key == activeKey ||
+        (shiftIsActive && (
+            (key->code == KEYCODE_SHIFT && !shiftIsSticky) ||
+            (key->code == KEYCODE_CAPS && shiftIsSticky)
+        )) ||
+        (controlIsActive && key->code == KEYCODE_CONTROL)
+    );
 
     uint16_t keyColor = isActive ? 0xFFFF : 0;
     uint16_t borderColor = isActive ? 0xFFFF : tft.color565(0x80, 0x80, 0x80);
@@ -224,15 +276,45 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
 
     if (activeKey) {
         if (activeKey->code == KEYCODE_SHIFT) {
-            shiftIsActive = !shiftIsActive;
-
+            _input_set_mode(true, false, false);
             _input_draw_all_keys();
+        } else if (activeKey->code == KEYCODE_CAPS) {
+            _input_set_mode(true, true, false);
+            _input_draw_all_keys();
+        } else if (activeKey->code == KEYCODE_CONTROL) {
+            _input_set_mode(false, false, true);
+            _input_draw_all_keys(); // redraw all, to clear previous mode
         } else {
             _input_draw_key(activeRow, activeKey);
 
-            const char charCode = shiftIsActive ? activeKey->shiftCode : activeKey->code;
+            if (shiftIsActive) {
+                Serial.print(activeKey->shiftCode);
 
-            test_send_char(charCode);
+                // clear back to lowercase unless caps-lock
+                if (!shiftIsSticky) {
+                    _input_set_mode(false, false, false);
+                    _input_draw_all_keys();
+                }
+            } else if (controlIsActive) {
+                if (activeKey->code >= 97 && activeKey->code <= 122) {
+                    // alpha control keys
+                    Serial.print((char)(activeKey->code - 96));
+                } else if (activeKey->code >= 91 && activeKey->code <= 93) {
+                    // [, / and ] control keys
+                    // @todo other stragglers
+                    Serial.print((char)(activeKey->code - 91 + 27));
+                }
+
+                // always clear back to normal
+                _input_set_mode(false, false, false);
+                _input_draw_all_keys();
+            } else if (activeKey->code >= KEYCODE_ARROW_START && activeKey->code < KEYCODE_ARROW_START + 4) {
+                Serial.print((char)27); // Esc
+                Serial.print(tintty_cursor_key_mode_application ? 'O' : '['); // different code depending on terminal state
+                Serial.print((char)(activeKey->code - KEYCODE_ARROW_START + 'A'));
+            } else {
+                Serial.print(activeKey->code);
+            }
         }
     }
 }
@@ -244,13 +326,7 @@ void _input_process_release() {
     activeRow = NULL;
     activeKey = NULL;
 
-    if (shiftIsActive && releasedKey->code != KEYCODE_SHIFT) {
-        shiftIsActive = false;
-
-        _input_draw_all_keys();
-    } else {
-        _input_draw_key(releasedKeyRow, releasedKey);
-    }
+    _input_draw_key(releasedKeyRow, releasedKey);
 }
 
 void input_init() {
