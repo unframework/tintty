@@ -36,6 +36,7 @@ bool touchActive = false; // touch status latch state
 
 #define KEYCODE_SHIFT -20
 #define KEYCODE_CAPS -21
+#define KEYCODE_CONTROL -22
 
 const int touchKeyRowCount = 5;
 
@@ -152,8 +153,16 @@ struct touchKeyRow {
     },
     {
         KEY_ROW_A_Y + (KEY_GUTTER + KEY_HEIGHT) * 4,
-        1,
+        2,
         {
+            {
+                1,
+                22,
+                KEYCODE_CONTROL,
+                KEYCODE_CONTROL,
+                'C'
+            },
+
             { (ILI9341_WIDTH - 100) / 2, 100, ' ', ' ', ' ' }
         }
     }
@@ -163,15 +172,22 @@ struct touchKeyRow *activeRow = NULL;
 struct touchKey *activeKey = NULL;
 bool shiftIsActive = false;
 bool shiftIsSticky = false;
+bool controlIsActive = false;
 
-void _input_set_mode(bool shift, bool shiftSticky) {
+void _input_set_mode(bool shift, bool shiftSticky, bool control) {
     // reset if current mode already matches
-    if (shiftIsActive == shift && shiftIsSticky == shiftSticky) {
+    if (
+        shiftIsActive == shift &&
+        shiftIsSticky == shiftSticky &&
+        controlIsActive == control
+    ) {
         shiftIsActive = false;
         shiftIsSticky = false;
+        controlIsActive = false;
     } else {
         shiftIsActive = shift;
         shiftIsSticky = shiftSticky;
+        controlIsActive = control;
     }
 }
 
@@ -179,10 +195,11 @@ void _input_draw_key(struct touchKeyRow *keyRow, struct touchKey *key) {
     const int16_t rowCY = keyRow->y;
     const bool isActive = (
         key == activeKey ||
-        shiftIsActive && (
+        (shiftIsActive && (
             (key->code == KEYCODE_SHIFT && !shiftIsSticky) ||
             (key->code == KEYCODE_CAPS && shiftIsSticky)
-        )
+        )) ||
+        (controlIsActive && key->code == KEYCODE_CONTROL)
     );
 
     uint16_t keyColor = isActive ? 0xFFFF : 0;
@@ -251,11 +268,14 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
 
     if (activeKey) {
         if (activeKey->code == KEYCODE_SHIFT) {
-            _input_set_mode(true, false);
+            _input_set_mode(true, false, false);
             _input_draw_all_keys();
         } else if (activeKey->code == KEYCODE_CAPS) {
-            _input_set_mode(true, true);
+            _input_set_mode(true, true, false);
             _input_draw_all_keys();
+        } else if (activeKey->code == KEYCODE_CONTROL) {
+            _input_set_mode(false, false, true);
+            _input_draw_all_keys(); // redraw all, to clear previous mode
         } else {
             _input_draw_key(activeRow, activeKey);
 
@@ -264,9 +284,22 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
 
                 // clear back to lowercase unless caps-lock
                 if (!shiftIsSticky) {
-                    shiftIsActive = false;
+                    _input_set_mode(false, false, false);
                     _input_draw_all_keys();
                 }
+            } else if (controlIsActive) {
+                if (activeKey->code >= 97 && activeKey->code <= 122) {
+                    // alpha control keys
+                    Serial.print(activeKey->code - 96);
+                } else if (activeKey->code >= 91 && activeKey->code <= 93) {
+                    // [, / and ] control keys
+                    // @todo other stragglers
+                    Serial.print(activeKey->code - 91 + 27);
+                }
+
+                // always clear back to normal
+                _input_set_mode(false, false, false);
+                _input_draw_all_keys();
             } else {
                 Serial.print(activeKey->code);
             }
