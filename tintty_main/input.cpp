@@ -177,7 +177,13 @@ void _input_set_mode(bool shift, bool shiftSticky) {
 
 void _input_draw_key(struct touchKeyRow *keyRow, struct touchKey *key) {
     const int16_t rowCY = keyRow->y;
-    const bool isActive = key == activeKey;
+    const bool isActive = (
+        key == activeKey ||
+        shiftIsActive && (
+            (key->code == KEYCODE_SHIFT && !shiftIsSticky) ||
+            (key->code == KEYCODE_CAPS && shiftIsSticky)
+        )
+    );
 
     uint16_t keyColor = isActive ? 0xFFFF : 0;
     uint16_t borderColor = isActive ? 0xFFFF : tft.color565(0x80, 0x80, 0x80);
