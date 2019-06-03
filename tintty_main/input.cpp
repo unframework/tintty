@@ -297,20 +297,20 @@ void _input_process_touch(int16_t xpos, int16_t ypos) {
             } else if (controlIsActive) {
                 if (activeKey->code >= 97 && activeKey->code <= 122) {
                     // alpha control keys
-                    Serial.print(activeKey->code - 96);
+                    Serial.print((char)(activeKey->code - 96));
                 } else if (activeKey->code >= 91 && activeKey->code <= 93) {
                     // [, / and ] control keys
                     // @todo other stragglers
-                    Serial.print(activeKey->code - 91 + 27);
+                    Serial.print((char)(activeKey->code - 91 + 27));
                 }
 
                 // always clear back to normal
                 _input_set_mode(false, false, false);
                 _input_draw_all_keys();
             } else if (activeKey->code >= KEYCODE_ARROW_START && activeKey->code < KEYCODE_ARROW_START + 4) {
-                Serial.print(27); // Esc
+                Serial.print((char)27); // Esc
                 Serial.print('[');
-                Serial.print(activeKey->code - KEYCODE_ARROW_START + 'A');
+                Serial.print((char)(activeKey->code - KEYCODE_ARROW_START + 'A'));
             } else {
                 Serial.print(activeKey->code);
             }
