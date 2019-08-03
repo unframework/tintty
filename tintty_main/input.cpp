@@ -199,7 +199,7 @@ void _input_set_mode(bool shift, bool shiftSticky, bool control) {
     }
 }
 
-void _input_draw_key(struct touchKeyRow *keyRow, struct touchKey *key) {
+void _input_draw_key(const struct touchKeyRow *keyRow, const struct touchKey *key) {
     const int16_t rowCY = keyRow->y;
     const bool isActive = (
         key == activeKey ||

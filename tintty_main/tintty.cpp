@@ -145,7 +145,7 @@ void _render(tintty_display *display) {
         const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
 
         // compute pixel data for pushing to TFT
-        const uint16_t pushedData[4 * 6];
+        uint16_t pushedData[4 * 6];
         uint16_t *pushedDataHead = pushedData; // pointer to latest pixel in pushedData
 
         const uint8_t char_set = state.g4bank_char_set[state.out_char_g4bank & 0x03]; // ensure 0-3 value
@@ -325,7 +325,7 @@ void _ensure_cursor_vscroll(tintty_display *display) {
 
 void _send_sequence(
     void (*send_char)(char ch),
-    char* str
+    const char* str
 ) {
     // send zero-terminated sequence character by character
     while (*str) {
