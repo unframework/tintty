@@ -2,6 +2,7 @@
 
 #include <MCUFRIEND_kbv.h>
 
+// @todo use e.g. more abstract renderer struct?
 extern MCUFRIEND_kbv tft;
 
 // @todo move?

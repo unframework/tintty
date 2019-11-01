@@ -42,7 +42,7 @@ char *test_buffer = "-- \e[1mTinTTY\e[m --\r\n";
 uint8_t test_buffer_cursor = 0;
 
 void setup() {
-  Serial.begin(115200); // standard Raspberry Pi baud-rate
+  Serial.begin(9600); // common default baud-rate (also avoids buffer overruns)
 
   uint16_t tftID = tft.readID();
   tft.begin(tftID);

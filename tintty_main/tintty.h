@@ -23,6 +23,7 @@ struct tintty_display {
  * Peek/read callbacks are expected to block until input is available;
  * while sketch is waiting for input, it should call the tintty_idle() hook
  * to allow animating cursor, etc.
+ * @todo rewrite this to avoid using function refs/etc
  */
 void tintty_run(
     char (*peek_char)(),
