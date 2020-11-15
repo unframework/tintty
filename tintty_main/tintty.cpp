@@ -145,7 +145,7 @@ void _render(tintty_display *display) {
         const uint16_t bg_tft_color = ANSI_COLORS[state.bg_ansi_color];
 
         // compute pixel data for pushing to TFT
-        const uint16_t pushedData[4 * 6];
+        uint16_t pushedData[4 * 6];
         uint16_t *pushedDataHead = pushedData; // pointer to latest pixel in pushedData
 
         const uint8_t char_set = state.g4bank_char_set[state.out_char_g4bank & 0x03]; // ensure 0-3 value
@@ -325,7 +325,7 @@ void _ensure_cursor_vscroll(tintty_display *display) {
 
 void _send_sequence(
     void (*send_char)(char ch),
-    char* str
+    const char* str
 ) {
     // send zero-terminated sequence character by character
     while (*str) {
@@ -446,7 +446,38 @@ void _exec_escape_question_command(
     }
 }
 
-// @todo cursor position report
+void _exec_escape_report_command(
+    uint16_t* arg_list,
+    uint16_t arg_count,
+    void (*send_char)(char ch)
+) {
+    if (arg_count != 1) return;
+    uint16_t report = arg_list[0];
+
+    switch (report) {
+    case 5:
+        // report status
+        _send_sequence(send_char, "\e[0n");
+        break;
+
+    case 6:
+    {
+        // report cursor position
+
+        char buffer[5];
+        send_char('\e');
+        send_char('[');
+        utoa(state.cursor_row - state.top_row + 1, buffer, 10);
+        _send_sequence(send_char, buffer);
+        send_char(';');
+        utoa(state.cursor_col + 1, buffer, 10);
+        _send_sequence(send_char, buffer);
+        send_char('R');
+        break;
+    }
+    }
+}
+
 void _exec_escape_bracket_command_with_args(
     char (*peek_char)(),
     char (*read_char)(),
@@ -531,6 +562,10 @@ void _exec_escape_bracket_command_with_args(
         case 'm':
             // graphic rendition mode
             _apply_graphic_rendition(arg_list, arg_count);
+            break;
+        case 'n':
+            // report command
+            _exec_escape_report_command(arg_list, arg_count, send_char);
             break;
 
         case 'h':
