@@ -1,5 +1,9 @@
 # TinTTY
 
+Tiny console terminal implemented in Arduino C.
+
+![using the Arduino-based console with touchscreen stylus](tintty-v2-usage-preview.jpg)
+
 ## Prerequisites
 
 - Adafruit GFX
